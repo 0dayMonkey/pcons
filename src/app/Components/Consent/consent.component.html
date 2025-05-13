@@ -1,0 +1,53 @@
+<div class="consent-container">
+  <header class="player-info-header">
+    <div class="player-details">
+      <h2>Informations du Joueur</h2>
+      <p><strong>Nom:</strong> {{ lastName }}</p>
+      <p><strong>Prénom:</strong> {{ firstName }}</p>
+      <p><strong>Né(e) le:</strong> {{ birthDate }}</p>
+      <p><strong>ID:</strong> {{ cardIdType }} - {{ cardIdNumber }}</p>
+    </div>
+    <img [src]="playerPhotoUrl" alt="Photo du Joueur" class="player-photo">
+  </header>
+
+  <section class="conditions-section">
+    <div class="conditions-controls-header">
+      <h2>Protection de la vie privée</h2>
+      <div class="text-size-controls">
+        <button (click)="setTextSize('small')" [class.active]="currentTextSize === 'small'">A</button>
+        <button (click)="setTextSize('medium')" [class.active]="currentTextSize === 'medium'">A</button>
+        <button (click)="setTextSize('large')" [class.active]="currentTextSize === 'large'">A</button>
+      </div>
+    </div>
+    <div #rulesBody class="conditions-content-container" [ngClass]="'text-size-' + currentTextSize">
+      <div class="conditions-content">
+        <pre>{{ rulesText }}</pre>
+      </div>
+    </div>
+  </section>
+
+  <footer class="consent-actions-footer">
+    <div class="checkbox-group">
+      <label>
+        <input type="checkbox" [(ngModel)]="mandatoryCheckbox">
+        <span><strong>Consentement:</strong> Je déclare avoir pris connaissance et je donne mon consentement aux conditions d'utilisation et à la politique de confidentialité. (Obligatoire)</span>
+      </label>
+      <label>
+        <input type="checkbox" [(ngModel)]="optionalCheckbox">
+        <span><strong>Communications:</strong> J'accepte d'être contacté(e) par SMS et e-mail pour des avantages promotionnels et des informations du casino.</span>
+      </label>
+    </div>
+
+    <div class="signature-area">
+      <label for="signaturePadCanvas" class="signature-label">Signature Manuscrite:</label>
+      <div class="signature-pad-wrapper">
+        <canvas #signaturePadCanvas id="signaturePadCanvas"></canvas>
+      </div>
+      <button type="button" (click)="clearSignature()" class="clear-signature-button">Effacer</button>
+    </div>
+
+    <button type="button" (click)="onSubmit()" [disabled]="!isSubmitEnabled()" class="validate-button">
+      Valider
+    </button>
+  </footer>
+</div>
