@@ -5,27 +5,50 @@ import {
   AfterViewInit,
   OnDestroy,
   Renderer2,
+  OnInit,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient, HttpClientModule } from '@angular/common/http';
 import SignaturePad from 'signature_pad';
+
+// (Interfaces pour la réponse de l'API - inchangées)
+interface RandomUserName {
+  title: string;
+  first: string;
+  last: string;
+}
+
+interface RandomUserDob {
+  date: string;
+  age: number;
+}
+
+interface RandomUser {
+  name: RandomUserName;
+  dob: RandomUserDob;
+}
+
+interface RandomUserResponse {
+  results: RandomUser[];
+}
 
 @Component({
   selector: 'app-consent',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, HttpClientModule],
   templateUrl: './consent.component.html',
   styleUrls: ['./consent.component.scss'],
 })
-export class ConsentComponent implements AfterViewInit, OnDestroy {
+export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   consentId: string = 'CONSENT12345';
-  firstName: string = 'John';
-  lastName: string = 'Doe';
-  birthDate: string = '1990-01-01';
+  firstName: string = 'Chargement...';
+  lastName: string = 'Chargement...';
+  birthDate: string = 'YYYY-MM-DD';
   cardIdType: string = 'National ID';
-  cardIdNumber: string = 'AB1234567';
-  playerPhotoUrl: string =
-    'https://placehold.co/80x80/E0E0E0/757575?text=Photo';
+  // Valeur initiale pour cardIdNumber, sera remplacée dans ngOnInit
+  cardIdNumber: string = 'Génération...';
+  playerPhotoUrl: string = 'https://thispersondoesnotexist.com/';
 
   rulesText: string = `
 1. Qui est responsable du traitement des données à caractère personnel ?
@@ -69,7 +92,57 @@ Fin des conditions.
   private signaturePad!: SignaturePad;
   private resizeObserver!: ResizeObserver;
 
-  constructor(private renderer: Renderer2) {}
+  constructor(private renderer: Renderer2, private http: HttpClient) {}
+
+  ngOnInit(): void {
+    this.fetchAndSetUserData();
+    // Générer et assigner le cardIdNumber aléatoire
+    this.cardIdNumber = this.generateRandomCardIdNumber();
+  }
+
+  private generateRandomCardIdNumber(): string {
+    const min = 1111111;
+    const max = 9999999;
+    // Génère un nombre entier aléatoire entre min et max (inclus)
+    const randomNumber = Math.floor(Math.random() * (max - min + 1)) + min;
+    return randomNumber.toString(); // Convertit en chaîne de caractères
+  }
+
+  fetchAndSetUserData(): void {
+    const apiUrl = 'https://randomuser.me/api/?inc=name,dob&noinfo';
+    this.http.get<RandomUserResponse>(apiUrl).subscribe({
+      next: (apiData) => {
+        if (apiData.results && apiData.results.length > 0) {
+          const userFromApi = apiData.results[0];
+
+          this.firstName = userFromApi.name.first;
+          this.lastName = userFromApi.name.last;
+
+          const birthDateFromApi = new Date(userFromApi.dob.date);
+          this.birthDate = birthDateFromApi.toISOString().split('T')[0];
+        } else {
+          console.warn(
+            "API randomuser.me n'a pas retourné les données attendues. Utilisation des valeurs par défaut pour nom/date."
+          );
+          this.firstName = 'John';
+          this.lastName = 'Doe';
+          this.birthDate = '1990-01-01';
+        }
+      },
+      error: (err) => {
+        console.error(
+          'Erreur lors de la récupération des données utilisateur :',
+          err
+        );
+        this.firstName = 'John';
+        this.lastName = 'Doe';
+        this.birthDate = '1990-01-01';
+      },
+    });
+  }
+
+  // ... (ngAfterViewInit, ngOnDestroy, et toutes vos autres méthodes restent ici)
+  // initializeSignaturePad, resizeSignaturePad, clearSignature, onRulesScroll, checkScroll, setTextSize, isSubmitEnabled, onSubmit
 
   ngAfterViewInit(): void {
     this.initializeSignaturePad();
@@ -127,7 +200,11 @@ Fin des conditions.
         }
       );
       this.signaturePad.addEventListener('endStroke', () => {
-        this.signatureDataUrl = this.signaturePad.toDataURL();
+        if (!this.signaturePad.isEmpty()) {
+          this.signatureDataUrl = this.signaturePad.toDataURL();
+        } else {
+          this.signatureDataUrl = null;
+        }
       });
       this.resizeSignaturePad();
     }
@@ -139,11 +216,24 @@ Fin des conditions.
       const parent = canvas.parentElement;
       if (parent) {
         const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        const currentData = this.signaturePad.isEmpty()
+          ? null
+          : this.signaturePad.toDataURL();
+
         canvas.width = parent.offsetWidth * ratio;
         canvas.height = parent.offsetHeight * ratio;
-        canvas.getContext('2d')?.scale(ratio, ratio);
-        this.signaturePad.clear();
-        this.signatureDataUrl = null;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.scale(ratio, ratio);
+        }
+
+        if (currentData) {
+          this.signaturePad.fromDataURL(currentData);
+          this.signatureDataUrl = currentData;
+        } else {
+          this.signaturePad.clear();
+          this.signatureDataUrl = null;
+        }
       }
     }
   }
@@ -187,7 +277,11 @@ Fin des conditions.
     if (this.isSubmitEnabled()) {
       console.log('Consentement soumis');
       console.log('ID Consentement:', this.consentId);
-      console.log('Nom:', this.firstName, this.lastName);
+      console.log('Prénom:', this.firstName); // Modifié pour correspondre aux propriétés
+      console.log('Nom:', this.lastName); // Modifié pour correspondre aux propriétés
+      console.log('Date de naissance:', this.birthDate);
+      console.log('Type ID Carte:', this.cardIdType); // Ajout pour voir la valeur
+      console.log('Numéro ID Carte:', this.cardIdNumber); // Ajout pour voir la valeur
       console.log('Checkbox Obligatoire:', this.mandatoryCheckbox);
       console.log('Checkbox Optionnelle:', this.optionalCheckbox);
       console.log('Signature:', this.signatureDataUrl ? 'Présente' : 'Absente');
