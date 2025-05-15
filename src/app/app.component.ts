@@ -1,7 +1,13 @@
 import { Component, OnInit, OnDestroy, Renderer2, Inject } from '@angular/core';
-import { Router, RouterOutlet } from '@angular/router';
+import {
+  Router,
+  RouterOutlet,
+  ActivatedRoute,
+  NavigationEnd,
+} from '@angular/router';
 import { DOCUMENT } from '@angular/common';
 import { Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
 import {
   AppWebSocketService,
   WebSocketMessage,
@@ -18,16 +24,47 @@ export class AppComponent implements OnInit, OnDestroy {
   title = 'app';
   private listeners: Array<() => void> = [];
   private webSocketSubscription: Subscription | undefined;
+  private queryParamSubscription: Subscription | undefined;
+  private routerEventsSubscription: Subscription | undefined;
 
   constructor(
     private renderer: Renderer2,
     @Inject(DOCUMENT) private document: Document,
     private router: Router,
+    private activatedRoute: ActivatedRoute,
     private webSocketService: AppWebSocketService
   ) {}
 
   ngOnInit(): void {
-    this.webSocketService.connect();
+    this.routerEventsSubscription = this.router.events
+      .pipe(filter((event) => event instanceof NavigationEnd))
+      .subscribe((event) => {
+        if (event instanceof NavigationEnd) {
+          if (
+            event.urlAfterRedirects === '/' ||
+            event.urlAfterRedirects.startsWith('/?')
+          ) {
+            this.router.navigate(['/logo'], {
+              queryParamsHandling: 'preserve',
+            });
+          }
+        }
+      });
+
+    this.queryParamSubscription = this.activatedRoute.queryParamMap.subscribe(
+      (params) => {
+        const wsPort = params.get('wsPort');
+        if (wsPort) {
+          const wsUrl = `ws://localhost:${wsPort}`;
+          this.webSocketService.connect(wsUrl);
+        } else {
+          console.warn(
+            "Le paramètre wsPort est manquant dans l'URL actuelle. La connexion WebSocket pourrait ne pas être initiée si elle n'a pas déjà été établie."
+          );
+        }
+      }
+    );
+
     this.webSocketSubscription = this.webSocketService.messages$.subscribe(
       (message: WebSocketMessage) => {
         this.handleWebSocketMessage(message);
@@ -65,20 +102,19 @@ export class AppComponent implements OnInit, OnDestroy {
     this.listeners.push(
       this.renderer.listen('document', 'fullscreenchange', () => {
         if (!this.document.fullscreenElement) {
-          // this.requestFullScreen(); // Commentez ou adaptez si le plein écran constant n'est pas souhaité
         }
       })
     );
-    // ... autres listeners pour fullscreen si nécessaire
   }
 
   private handleWebSocketMessage(message: WebSocketMessage): void {
     if (message.Action === 'Consent' && message.PlayerId) {
-      this.router.navigate(['/consent', message.PlayerId]);
+      this.router.navigate(['/consent', message.PlayerId], {
+        queryParamsHandling: 'preserve',
+      });
     } else if (message.Action === 'Idle') {
-      this.router.navigate(['/logo']);
+      this.router.navigate(['/logo'], { queryParamsHandling: 'preserve' });
     }
-    // Gérez d'autres actions si nécessaire
   }
 
   requestFullScreen(): void {
@@ -98,8 +134,6 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
-  // @HostListener('document:keydown', ['$event']) // HostListener n'est pas directement utilisable dans les services ou en dehors des directives/composants de cette manière.
-  // La gestion des keydown est déjà dans votre version originale, je la laisse ici pour référence si vous la réactivez.
   onKeydownHandler(event: KeyboardEvent) {
     if (event.key === 'F11') {
       event.preventDefault();
@@ -126,6 +160,12 @@ export class AppComponent implements OnInit, OnDestroy {
     this.listeners.forEach((listener) => listener());
     if (this.webSocketSubscription) {
       this.webSocketSubscription.unsubscribe();
+    }
+    if (this.queryParamSubscription) {
+      this.queryParamSubscription.unsubscribe();
+    }
+    if (this.routerEventsSubscription) {
+      this.routerEventsSubscription.unsubscribe();
     }
     this.webSocketService.closeConnection();
   }

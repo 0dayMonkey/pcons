@@ -13,13 +13,22 @@
   <section class="conditions-section">
     <div class="conditions-controls-header">
       <h2>Protection de la vie privée</h2>
-      <div class="text-size-controls">
-        <button (click)="setTextSize('small')" [class.active]="currentTextSize === 'small'">A</button>
-        <button (click)="setTextSize('medium')" [class.active]="currentTextSize === 'medium'">A</button>
-        <button (click)="setTextSize('large')" [class.active]="currentTextSize === 'large'">A</button>
+      <div class="text-size-slider-container">
+        <span class="slider-label small-text-icon">A</span>
+        <input
+          type="range"
+          min="12"
+          max="30"
+          step="1"
+          [value]="currentTextSizeInPx"
+          (input)="onTextSizeChange($event)"
+          class="text-size-slider">
+        <span class="slider-label large-text-icon">A</span>
       </div>
     </div>
-    <div #rulesBody class="conditions-content-container" [ngClass]="'text-size-' + currentTextSize">
+    <div #rulesBody
+         class="conditions-content-container"
+         [style.--dynamic-font-size.px]="currentTextSizeInPx">
       <div class="conditions-content">
         <pre>{{ rulesText }}</pre>
       </div>
@@ -30,24 +39,46 @@
     <div class="checkbox-group">
       <label>
         <input type="checkbox" [(ngModel)]="mandatoryCheckbox">
-        <span><strong>Consentement:</strong> Je déclare avoir pris connaissance et je donne mon consentement aux conditions d'utilisation et à la politique de confidentialité. (Obligatoire)</span>
+        <span [style.font-size.px]="getScaledCheckboxLabelSize()"><strong>Consentement:</strong> Je déclare avoir pris connaissance et je donne mon consentement aux conditions d'utilisation et à la politique de confidentialité. (Obligatoire)</span>
       </label>
       <label>
         <input type="checkbox" [(ngModel)]="optionalCheckbox">
-        <span><strong>Communications:</strong> J'accepte d'être contacté(e) par SMS et e-mail pour des avantages promotionnels et des informations du casino.</span>
+        <span [style.font-size.px]="getScaledCheckboxLabelSize()"><strong>Communications:</strong> J'accepte d'être contacté(e) par SMS et e-mail pour des avantages promotionnels et des informations du casino.</span>
       </label>
     </div>
 
     <div class="signature-area">
-      <label for="signaturePadCanvas" class="signature-label">Signature Manuscrite:</label>
-      <div class="signature-pad-wrapper">
+      <div class="signature-header">
+        <label for="signaturePadCanvas" class="signature-label">Signature Manuscrite:</label>
+        <div class="signature-controls">
+          <button type="button" (click)="toggleSignaturePadSize()" class="signature-size-toggle-button" title="{{ isSignaturePadEnlarged ? 'Réduire la zone de signature' : 'Agrandir la zone de signature' }}">
+            <svg *ngIf="!isSignaturePadEnlarged" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="icon">
+              <path d="M3 8.25V3h5.25L3 8.25ZM4.75 4.75H3V3h1.75v1.75ZM11.75 3H17v5.25L11.75 3ZM15.25 4.75H17V3h-1.75v1.75ZM3 11.75V17h5.25L3 11.75ZM4.75 15.25H3V17h1.75v-1.75ZM11.75 17H17v-5.25L11.75 17ZM15.25 15.25H17V17h-1.75v-1.75Z" />
+            </svg>
+            <svg *ngIf="isSignaturePadEnlarged" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="icon">
+              <path d="M8.25 3H3v5.25L8.25 3ZM4.75 4.75V3h1.75L4.75 4.75ZM3 11.75V17h5.25L3 11.75ZM4.75 15.25V17h1.75L4.75 15.25ZM11.75 3H17v5.25L11.75 3ZM15.25 4.75V3h1.75L15.25 4.75ZM11.75 17H17v-5.25L11.75 17ZM15.25 15.25V17h1.75L15.25 15.25Z" />
+            </svg>
+          </button>
+          <button type="button" (click)="clearSignature()" class="clear-signature-button">Effacer</button>
+        </div>
+      </div>
+      <div class="signature-pad-wrapper" #signaturePadWrapper [class.enlarged]="isSignaturePadEnlarged">
         <canvas #signaturePadCanvas id="signaturePadCanvas"></canvas>
       </div>
-      <button type="button" (click)="clearSignature()" class="clear-signature-button">Effacer</button>
     </div>
 
-    <button type="button" (click)="onSubmit()" [disabled]="!isSubmitEnabled()" class="validate-button">
-      Valider
+    <button
+      type="button"
+      (click)="onSubmit()"
+      [disabled]="!isSubmitEnabled() || buttonState !== 'idle'"
+      class="validate-button"
+      [class.loading]="buttonState === 'loading'"
+      [class.success]="buttonState === 'success'">
+      <span *ngIf="buttonState === 'idle'">Valider</span>
+      <div *ngIf="buttonState === 'loading'" class="spinner"></div>
+      <svg *ngIf="buttonState === 'success'" class="checkmark-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+        <path fill-rule="evenodd" d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.454-12.68a.75.75 0 0 1 1.04-.208Z" clip-rule="evenodd" />
+      </svg>
     </button>
   </footer>
 </div>

@@ -4,18 +4,25 @@ import {
   ViewChild,
   AfterViewInit,
   OnDestroy,
-  Renderer2,
   OnInit,
+  Renderer2,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient, HttpClientModule } from '@angular/common/http';
-import { ActivatedRoute, Router } from '@angular/router'; // Router ajouté
+import {
+  HttpClient,
+  HttpClientModule,
+  HttpHeaders,
+} from '@angular/common/http';
+import { ActivatedRoute, Router } from '@angular/router';
 import SignaturePad from 'signature_pad';
 import {
   AppWebSocketService,
   WebSocketMessage,
-} from '../../Services/websocket.service'; // Assurez-vous que le chemin est correct
+} from '../../Services/websocket.service';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import * as Handlebars from 'handlebars';
 
 interface PlayerData {
   id: string;
@@ -33,12 +40,12 @@ interface PlayerData {
   styleUrls: ['./consent.component.scss'],
 })
 export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
-  consentId: string = 'CONSENT_FORM_ID'; // Peut être dynamique ou généré
+  consentId: string = 'CONSENT_FORM_ID';
   firstName: string = 'Chargement...';
   lastName: string = 'Chargement...';
   birthDate: string = 'YYYY-MM-DD';
   cardIdType: string = 'National ID';
-  cardIdNumber: string = 'Chargement...'; // Sera l'ID du joueur
+  cardIdNumber: string = 'Chargement...';
   playerPhotoUrl: string =
     'https://placehold.co/100x100/E0E0E0/757575?text=Chargement';
   private currentPlayerId: string | null = null;
@@ -70,36 +77,45 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   optionalCheckbox: boolean = false;
   signatureDataUrl: string | null = null;
   hasScrolledToBottom: boolean = false;
-  currentTextSize: 'small' | 'medium' | 'large' = 'medium';
+  currentTextSizeInPx: number = 16;
+  buttonState: 'idle' | 'loading' | 'success' = 'idle';
+  isSignaturePadEnlarged: boolean = false;
+
+  private baseCheckboxLabelSizePx: number = 12;
+  private defaultConditionsTextSizePx: number = 16;
 
   @ViewChild('signaturePadCanvas')
   signaturePadCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('rulesBody') rulesBody!: ElementRef<HTMLDivElement>;
+  @ViewChild('signaturePadWrapper')
+  signaturePadWrapper!: ElementRef<HTMLDivElement>;
+
   private signaturePad!: SignaturePad;
   private resizeObserver!: ResizeObserver;
+  private navigationTimer: any;
 
   constructor(
-    private renderer: Renderer2,
     private http: HttpClient,
     private route: ActivatedRoute,
-    private router: Router, // Ajouté pour la navigation potentielle
-    private webSocketService: AppWebSocketService // Ajouté
+    private router: Router,
+    private webSocketService: AppWebSocketService,
+    private renderer: Renderer2
   ) {}
 
   ngOnInit(): void {
     this.currentPlayerId = this.route.snapshot.paramMap.get('playerId');
     if (this.currentPlayerId) {
       this.fetchAndSetUserData(this.currentPlayerId);
+      this.consentId = `CONSENT_${
+        this.currentPlayerId
+      }_${new Date().getTime()}`;
     } else {
-      console.error('Player ID manquant dans la route.');
       this.firstName = 'Erreur';
       this.lastName = 'ID Joueur';
       this.birthDate = 'N/A';
       this.cardIdNumber = 'N/A';
       this.playerPhotoUrl =
         'https://placehold.co/100x100/FF0000/FFFFFF?text=Erreur+ID';
-      // Optionnel: rediriger si l'ID est manquant
-      // this.router.navigate(['/logo']);
     }
   }
 
@@ -114,11 +130,10 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
         this.cardIdNumber = playerData.id;
       },
       error: (err) => {
-        console.error('Erreur API Mock:', err);
         this.firstName = 'N/A';
         this.lastName = 'N/A';
         this.birthDate = 'N/A';
-        this.cardIdNumber = playerId; // Affiche l'ID reçu même en cas d'erreur API
+        this.cardIdNumber = playerId;
         this.playerPhotoUrl =
           'https://placehold.co/100x100/FF8C00/FFFFFF?text=API+Error';
       },
@@ -134,14 +149,16 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
         this.onRulesScroll.bind(this)
       );
     }
-    this.resizeObserver = new ResizeObserver(() => this.resizeSignaturePad());
-    if (
-      this.signaturePadCanvas &&
-      this.signaturePadCanvas.nativeElement.parentElement
-    ) {
-      this.resizeObserver.observe(
-        this.signaturePadCanvas.nativeElement.parentElement
-      );
+    this.resizeObserver = new ResizeObserver(() => {
+      if (
+        this.signaturePadWrapper &&
+        this.signaturePadWrapper.nativeElement.offsetWidth > 0
+      ) {
+        this.resizeSignaturePad();
+      }
+    });
+    if (this.signaturePadWrapper && this.signaturePadWrapper.nativeElement) {
+      this.resizeObserver.observe(this.signaturePadWrapper.nativeElement);
     }
   }
 
@@ -154,15 +171,16 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     if (
       this.resizeObserver &&
-      this.signaturePadCanvas &&
-      this.signaturePadCanvas.nativeElement.parentElement
+      this.signaturePadWrapper &&
+      this.signaturePadWrapper.nativeElement
     ) {
-      this.resizeObserver.unobserve(
-        this.signaturePadCanvas.nativeElement.parentElement
-      );
+      this.resizeObserver.unobserve(this.signaturePadWrapper.nativeElement);
     }
     if (this.signaturePad) {
       this.signaturePad.off();
+    }
+    if (this.navigationTimer) {
+      clearTimeout(this.navigationTimer);
     }
   }
 
@@ -187,27 +205,30 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   resizeSignaturePad(): void {
-    if (this.signaturePad && this.signaturePadCanvas) {
+    if (
+      this.signaturePad &&
+      this.signaturePadCanvas &&
+      this.signaturePadWrapper
+    ) {
       const canvas = this.signaturePadCanvas.nativeElement;
-      const parent = canvas.parentElement;
-      if (parent) {
-        const ratio = Math.max(window.devicePixelRatio || 1, 1);
-        const currentData = this.signaturePad.isEmpty()
-          ? null
-          : this.signaturePad.toDataURL();
-        canvas.width = parent.offsetWidth * ratio;
-        canvas.height = parent.offsetHeight * ratio;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.scale(ratio, ratio);
-        }
-        if (currentData) {
-          this.signaturePad.fromDataURL(currentData);
-        } else {
-          this.signaturePad.clear();
-        }
-        this.signatureDataUrl = currentData;
+      const parentElement = this.signaturePadWrapper.nativeElement;
+
+      const ratio = Math.max(window.devicePixelRatio || 1, 1);
+      const parentWidth = parentElement.offsetWidth || 1;
+      const parentHeight = parentElement.offsetHeight || 1;
+
+      canvas.width = parentWidth * ratio;
+      canvas.height = parentHeight * ratio;
+      canvas.style.width = `${parentWidth}px`;
+      canvas.style.height = `${parentHeight}px`;
+
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.scale(ratio, ratio);
       }
+
+      this.signaturePad.clear(); // Efface la signature et applique le fond
+      this.signatureDataUrl = null; // La signature est effacée, donc pas de data URL
     }
   }
 
@@ -231,10 +252,30 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  setTextSize(size: 'small' | 'medium' | 'large'): void {
-    this.currentTextSize = size;
+  onTextSizeChange(event: Event): void {
+    const sliderValue = (event.target as HTMLInputElement).value;
+    this.currentTextSizeInPx = parseInt(sliderValue, 10);
     this.hasScrolledToBottom = false;
     setTimeout(() => this.checkScroll(), 0);
+  }
+
+  getScaledCheckboxLabelSize(): number {
+    const scaleFactor =
+      this.currentTextSizeInPx / this.defaultConditionsTextSizePx;
+    let scaledSize = this.baseCheckboxLabelSizePx * scaleFactor;
+    scaledSize = Math.max(10, Math.min(scaledSize, 22));
+    return scaledSize;
+  }
+
+  toggleSignaturePadSize(): void {
+    this.isSignaturePadEnlarged = !this.isSignaturePadEnlarged;
+    // Il est crucial d'appeler clearSignature AVANT que le ResizeObserver ne déclenche resizeSignaturePad,
+    // ou de s'assurer que resizeSignaturePad efface toujours.
+    // L'appel à resizeSignaturePad via setTimeout permet au CSS de s'appliquer d'abord.
+    this.clearSignature(); // Effacer la signature immédiatement au changement d'état
+    setTimeout(() => {
+      this.resizeSignaturePad(); // Redimensionne et réapplique le fond
+    }, 50);
   }
 
   isSubmitEnabled(): boolean {
@@ -245,21 +286,14 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     );
   }
 
-  onSubmit(): void {
-    if (this.isSubmitEnabled()) {
-      const consentResponse: WebSocketMessage = {
-        Action: 'Consent',
-        PlayerId: this.currentPlayerId || undefined, // Envoyez l'ID du joueur actuel
-        Status: true,
-        // Vous pourriez ajouter d'autres données ici, comme la signature (this.signatureDataUrl)
-        // ou le statut de la checkbox optionnelle (this.optionalCheckbox)
-      };
-      this.webSocketService.sendMessage(consentResponse);
-      console.log('Consentement soumis via WebSocket:', consentResponse);
-      alert('Consentement soumis (simulation) et envoyé via WebSocket.');
-      // Optionnel: naviguer vers une page de confirmation ou 'Idle'
-      // this.router.navigate(['/logo']);
-    } else {
+  async onSubmit(): Promise<void> {
+    if (this.isSignaturePadEnlarged) {
+      this.toggleSignaturePadSize();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+
+    if (!this.isSubmitEnabled() || this.buttonState !== 'idle') {
+      if (this.buttonState !== 'idle') return;
       let message = 'Validation impossible:';
       if (!this.hasScrolledToBottom)
         message += '\n- Veuillez lire toutes les conditions.';
@@ -267,6 +301,181 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
         message += '\n- La case de consentement obligatoire doit être cochée.';
       if (!this.signatureDataUrl) message += '\n- La signature est requise.';
       alert(message);
+      return;
     }
+
+    this.buttonState = 'loading';
+
+    const consentResponse: WebSocketMessage = {
+      Action: 'Consent',
+      PlayerId: this.currentPlayerId || undefined,
+      Status: true,
+    };
+    this.webSocketService.sendMessage(consentResponse);
+
+    try {
+      const pdfBlob = await this.generateConsentPdfAsBlob();
+      const formData = new FormData();
+      const pdfFileName = `Consentement_${this.lastName}_${this.firstName}_${this.currentPlayerId}.pdf`;
+      formData.append('pdfFile', pdfBlob, pdfFileName);
+      formData.append('playerId', this.currentPlayerId || 'unknown');
+      formData.append('consentId', this.consentId);
+
+      const uploadUrl = 'http://localhost:4000/upload-pdf';
+
+      this.http.post(uploadUrl, formData).subscribe({
+        next: (response) => {
+          this.buttonState = 'success';
+          this.navigationTimer = setTimeout(() => {
+            this.router.navigate(['/logo']);
+            this.buttonState = 'idle';
+          }, 3000);
+        },
+        error: (err) => {
+          console.error("Erreur lors de l'envoi du PDF au serveur:", err);
+          alert(
+            "Erreur lors de l'envoi du PDF au serveur. Vérifiez la console pour plus de détails."
+          );
+          this.buttonState = 'idle';
+        },
+      });
+    } catch (error) {
+      console.error('Erreur lors de la génération du PDF :', error);
+      alert('Erreur lors de la génération du PDF.');
+      this.buttonState = 'idle';
+    }
+  }
+
+  private async generateConsentPdfAsBlob(): Promise<Blob> {
+    const templateString = await this.http
+      .get('assets/template/template.html', { responseType: 'text' })
+      .toPromise();
+
+    if (!templateString) {
+      throw new Error("Le template HTML n'a pas pu être chargé.");
+    }
+
+    const template = Handlebars.compile(templateString);
+    const now = new Date();
+    const consentDate = now.toLocaleString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+    const generationDate = consentDate;
+
+    const data = {
+      lastName: this.lastName,
+      firstName: this.firstName,
+      birthDate: this.birthDate,
+      playerId: this.currentPlayerId || 'N/A',
+      playerPhotoUrl: this.playerPhotoUrl,
+      consentText: this.rulesText,
+      mandatoryCheckboxChecked: this.mandatoryCheckbox,
+      optionalCheckboxChecked: this.optionalCheckbox,
+      signatureImageUrl: this.signatureDataUrl,
+      consentDate: consentDate,
+      generationDate: generationDate,
+      consentFormId: this.consentId,
+    };
+
+    const processedHtml = template(data);
+    const printableElement = document.createElement('div');
+    printableElement.style.position = 'absolute';
+    printableElement.style.left = '-9999px';
+    printableElement.style.top = '0px';
+    printableElement.innerHTML = processedHtml;
+    document.body.appendChild(printableElement);
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    const containerToPrint = printableElement.querySelector(
+      '.container'
+    ) as HTMLElement;
+    if (!containerToPrint) {
+      document.body.removeChild(printableElement);
+      throw new Error(
+        "Élément '.container' non trouvé dans le template rendu."
+      );
+    }
+
+    const canvas = await html2canvas(containerToPrint, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      width: containerToPrint.offsetWidth,
+      height: containerToPrint.offsetHeight,
+      windowWidth: containerToPrint.scrollWidth,
+      windowHeight: containerToPrint.scrollHeight,
+      onclone: (clonedDoc) => {
+        const playerPhotoImg = clonedDoc.querySelector(
+          '.player-photo'
+        ) as HTMLImageElement;
+        if (
+          playerPhotoImg &&
+          data.playerPhotoUrl &&
+          data.playerPhotoUrl.startsWith('data:image')
+        ) {
+          playerPhotoImg.src = data.playerPhotoUrl;
+        }
+        const signatureImg = clonedDoc.querySelector(
+          '.signature-image'
+        ) as HTMLImageElement;
+        if (signatureImg && data.signatureImageUrl) {
+          signatureImg.src = data.signatureImageUrl;
+        }
+        const preElementClone = clonedDoc.querySelector(
+          '.conditions-content pre'
+        ) as HTMLElement;
+        if (preElementClone) {
+          preElementClone.style.fontSize = this.currentTextSizeInPx + 'px';
+        }
+        const checkboxLabelSpans = clonedDoc.querySelectorAll(
+          '.checkbox-group label span'
+        ) as NodeListOf<HTMLElement>;
+        checkboxLabelSpans.forEach((span) => {
+          span.style.fontSize = this.getScaledCheckboxLabelSize() + 'px';
+        });
+      },
+    });
+
+    document.body.removeChild(printableElement);
+
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'pt',
+      format: 'a4',
+    });
+
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const canvasWidth = canvas.width;
+    const canvasHeight = canvas.height;
+    const ratio = canvasWidth / pdfWidth;
+    const projectedCanvasHeight = canvasHeight / ratio;
+    let position = 0;
+    let heightLeft = projectedCanvasHeight;
+
+    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, projectedCanvasHeight);
+    heightLeft -= pdfHeight;
+
+    while (heightLeft > 0) {
+      position -= pdfHeight;
+      pdf.addPage();
+      pdf.addImage(
+        imgData,
+        'PNG',
+        0,
+        position,
+        pdfWidth,
+        projectedCanvasHeight
+      );
+      heightLeft -= pdfHeight;
+    }
+    return pdf.output('blob');
   }
 }

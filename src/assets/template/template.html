@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preuve de Consentement Joueur</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #fff; /* Fond blanc pour la capture, évite transparence inattendue */
+            color: #333;
+            font-size: 12px;
+            -webkit-print-color-adjust: exact; /* Force l'impression des couleurs de fond pour la capture */
+            color-adjust: exact;
+        }
+        .container {
+            width: 780px; /* Largeur fixe pour un meilleur contrôle du rendu A4 (environ 210mm - marges) */
+            margin: 0 auto; /* Centré si affiché, mais pour la capture, la position importe peu */
+            background-color: #fff;
+            padding: 20px;
+            border: 1px solid #ddd;
+            box-sizing: border-box;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #eee;
+            margin-bottom: 20px;
+        }
+        .player-info {
+            flex-grow: 1;
+        }
+        .player-info h1 {
+            margin: 0 0 10px 0;
+            font-size: 20px; /* Taille de police pour PDF */
+            color: #333;
+        }
+        .player-info p {
+            margin: 4px 0;
+            font-size: 11px; /* Taille de police pour PDF */
+        }
+        .player-photo {
+            width: 90px; /* Ajusté pour PDF */
+            height: 90px;
+            object-fit: cover;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-left: 20px;
+        }
+        .consent-text-section h2,
+        .checkboxes-section h2,
+        .signature-section h2 {
+            font-size: 16px; /* Taille de police pour PDF */
+            color: #555;
+            margin-top: 20px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 4px;
+        }
+        .consent-text {
+            font-size: 9px; /* Plus petit pour faire tenir le texte */
+            line-height: 1.4;
+            text-align: justify;
+            background-color: #fdfdfd;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            max-height: none; /* Pour html2canvas, afficher tout le contenu */
+        }
+        .consent-text pre {
+            margin: 0;
+            padding: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; /* Utiliser la même police que le reste */
+            color: #333;
+        }
+        .checkbox-item {
+            margin-bottom: 8px;
+            font-size: 11px;
+        }
+        .checkbox-item .checked-text { /* Pour afficher textuellement l'état */
+            font-weight: bold;
+        }
+        .signature-block {
+            margin-top: 10px;
+        }
+        .signature-block p {
+            font-size: 11px;
+            margin-bottom: 5px;
+        }
+        .signature-image {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+            margin-bottom: 10px;
+            min-height: 70px; /* Ajusté pour PDF */
+        }
+        .date-signature p {
+            font-size: 10px;
+            font-style: italic;
+            color: #555;
+        }
+        .footer {
+            margin-top: 25px;
+            padding-top: 10px;
+            border-top: 2px solid #eee;
+            text-align: center;
+            font-size: 9px;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="player-info">
+                <h1>Consentement du Joueur</h1>
+                <p><strong>Nom :</strong> {{ lastName }}</p>
+                <p><strong>Prénom :</strong> {{ firstName }}</p>
+                <p><strong>Date de Naissance :</strong> {{ birthDate }}</p>
+                <p><strong>ID Joueur :</strong> {{ playerId }}</p>
+            </div>
+            {{#if playerPhotoUrl}}
+            <img src="{{ playerPhotoUrl }}" alt="Photo du Joueur" class="player-photo">
+            {{else}}
+            <div class="player-photo" style="display: flex; align-items: center; justify-content: center; background-color: #eee; color: #aaa; font-size:10px; text-align: center;">Photo non disponible</div>
+            {{/if}}
+        </div>
+
+        <div class="consent-text-section">
+            <h2>Conditions Générales et Politique de Confidentialité</h2>
+            <div class="consent-text">
+                <pre>{{ consentText }}</pre>
+            </div>
+        </div>
+
+        <div class="checkboxes-section">
+            <h2>Accords Donnés</h2>
+            <div class="checkbox-item">
+                <strong>Consentement Obligatoire :</strong> Je déclare avoir pris connaissance et je donne mon consentement aux conditions d'utilisation et à la politique de confidentialité.
+                <span class="checked-text">(Validé : {{#if mandatoryCheckboxChecked}}Oui{{else}}Non{{/if}})</span>
+            </div>
+            <div class="checkbox-item">
+                <strong>Communications :</strong> J'accepte d'être contacté(e) par SMS et e-mail pour des avantages promotionnels et des informations du casino.
+                <span class="checked-text">(Validé : {{#if optionalCheckboxChecked}}Oui{{else}}Non{{/if}})</span>
+            </div>
+        </div>
+
+        <div class="signature-section">
+            <h2>Signature et Date</h2>
+            <div class="signature-block">
+                <p><strong>Signature Manuscrite du Joueur :</strong></p>
+                {{#if signatureImageUrl}}
+                <img src="{{ signatureImageUrl }}" alt="Signature du Joueur" class="signature-image">
+                {{else}}
+                <div class="signature-image" style="display: flex; align-items: center; justify-content: center; background-color: #eee; color: #aaa; font-size:10px; text-align: center;">Signature non fournie</div>
+                {{/if}}
+            </div>
+            <div class="date-signature">
+                <p><strong>Date du consentement :</strong> {{ consentDate }}</p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Document généré le {{ generationDate }}</p>
+            <p>ID du Formulaire de Consentement : {{ consentFormId }}</p>
+        </div>
+    </div>
+</body>
+</html>
