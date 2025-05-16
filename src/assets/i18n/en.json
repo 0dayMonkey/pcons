@@ -1,0 +1,31 @@
+{
+  "consent": {
+    "playerInfoTitle": "Player Information",
+    "lastNameLabel": "Last Name",
+    "firstNameLabel": "First Name",
+    "birthDateLabel": "Born on:",
+    "privacyPolicyTitle": "Privacy Policy",
+    "mandatoryConsentLabelBold": "Consent:",
+    "mandatoryConsentLabelText": " I declare that I have read and I give my consent to the terms of use and the privacy policy. (mandatory)",
+    "optionalCommunicationsLabelBold": "Communications:",
+    "optionalCommunicationsLabelText": " I agree to be contacted by SMS and e-mail for promotional advantages and casino information",
+    "signatureLabel": "Handwritten Signature",
+    "clearButton": "Clear",
+    "validateButton": {
+      "idle": "Validate"
+    }
+  },
+  "alert": {
+    "validationImpossible": "Validation impossible:",
+    "mustReadConditions": "- Please read all conditions.",
+    "mandatoryCheckboxRequired": "- The mandatory consent checkbox must be checked.",
+    "signatureRequired": "- Signature is required."
+  },
+  "generic": {
+    "loading": "Loading...",
+    "error": "Error",
+    "playerID": "Player ID",
+    "na": "N/A",
+    "apiError": "API Error"
+  }
+}

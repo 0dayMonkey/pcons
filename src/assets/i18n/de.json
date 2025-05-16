@@ -1,0 +1,31 @@
+{
+  "consent": {
+    "playerInfoTitle": "Spielerinformationen",
+    "lastNameLabel": "Nachname",
+    "firstNameLabel": "Vorname",
+    "birthDateLabel": "Geboren am:",
+    "privacyPolicyTitle": "Datenschutzrichtlinie",
+    "mandatoryConsentLabelBold": "Einwilligung:",
+    "mandatoryConsentLabelText": " Ich erkläre, dass ich die Nutzungsbedingungen und die Datenschutzrichtlinie gelesen habe und ihnen zustimme. (obligatorisch)",
+    "optionalCommunicationsLabelBold": "Mitteilungen:",
+    "optionalCommunicationsLabelText": " Ich stimme zu, per SMS und E-Mail für Werbevorteile und Casino-Informationen kontaktiert zu werden",
+    "signatureLabel": "Handschriftliche Unterschrift",
+    "clearButton": "Löschen",
+    "validateButton": {
+      "idle": "Bestätigen"
+    }
+  },
+  "alert": {
+    "validationImpossible": "Validierung unmöglich:",
+    "mustReadConditions": "- Bitte lesen Sie alle Bedingungen.",
+    "mandatoryCheckboxRequired": "- Das Kontrollkästchen für die obligatorische Einwilligung muss aktiviert sein.",
+    "signatureRequired": "- Unterschrift ist erforderlich."
+  },
+  "generic": {
+    "loading": "Laden...",
+    "error": "Fehler",
+    "playerID": "Spieler-ID",
+    "na": "N/A",
+    "apiError": "API-Fehler"
+  }
+}

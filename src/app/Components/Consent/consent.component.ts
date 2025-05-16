@@ -9,11 +9,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import {
-  HttpClient,
-  HttpClientModule,
-  HttpHeaders,
-} from '@angular/common/http';
+import { HttpClient, HttpClientModule } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import SignaturePad from 'signature_pad';
 import {
@@ -23,6 +19,7 @@ import {
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import * as Handlebars from 'handlebars';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 interface PlayerData {
   id: string;
@@ -35,19 +32,17 @@ interface PlayerData {
 @Component({
   selector: 'app-consent',
   standalone: true,
-  imports: [CommonModule, FormsModule, HttpClientModule],
+  imports: [CommonModule, FormsModule, HttpClientModule, TranslateModule],
   templateUrl: './consent.component.html',
   styleUrls: ['./consent.component.scss'],
 })
 export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   consentId: string = 'CONSENT_FORM_ID';
-  firstName: string = 'Chargement...';
-  lastName: string = 'Chargement...';
-  birthDate: string = 'YYYY-MM-DD';
-  cardIdType: string = 'National ID';
-  cardIdNumber: string = 'Chargement...';
-  playerPhotoUrl: string =
-    'https://placehold.co/100x100/E0E0E0/757575?text=Chargement';
+  firstName: string = '';
+  lastName: string = '';
+  birthDate: string = '';
+  cardIdNumber: string = '';
+  playerPhotoUrl: string = 'https://placehold.co/100x100/E0E0E0/757575?text=';
   private currentPlayerId: string | null = null;
 
   rulesText: string = `
@@ -99,8 +94,13 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     private route: ActivatedRoute,
     private router: Router,
     private webSocketService: AppWebSocketService,
-    private renderer: Renderer2
-  ) {}
+    private renderer: Renderer2,
+    private translate: TranslateService
+  ) {
+    this.playerPhotoUrl = `https://placehold.co/100x100/E0E0E0/757575?text=${this.translate.instant(
+      'generic.loading'
+    )}`;
+  }
 
   ngOnInit(): void {
     this.currentPlayerId = this.route.snapshot.paramMap.get('playerId');
@@ -110,12 +110,13 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
         this.currentPlayerId
       }_${new Date().getTime()}`;
     } else {
-      this.firstName = 'Erreur';
-      this.lastName = 'ID Joueur';
-      this.birthDate = 'N/A';
-      this.cardIdNumber = 'N/A';
-      this.playerPhotoUrl =
-        'https://placehold.co/100x100/FF0000/FFFFFF?text=Erreur+ID';
+      this.firstName = this.translate.instant('generic.error');
+      this.lastName = this.translate.instant('generic.playerID');
+      this.birthDate = this.translate.instant('generic.na');
+      this.cardIdNumber = this.translate.instant('generic.na');
+      this.playerPhotoUrl = `https://placehold.co/100x100/FF0000/FFFFFF?text=${this.translate.instant(
+        'generic.error'
+      )}+ID`;
     }
   }
 
@@ -126,16 +127,21 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
         this.firstName = playerData.firstName;
         this.lastName = playerData.lastName;
         this.birthDate = playerData.birthDate;
-        this.playerPhotoUrl = playerData.photoUrl;
+        this.playerPhotoUrl =
+          playerData.photoUrl ||
+          `https://placehold.co/100x100/E0E0E0/757575?text=${this.translate.instant(
+            'generic.na'
+          )}`;
         this.cardIdNumber = playerData.id;
       },
       error: (err) => {
-        this.firstName = 'N/A';
-        this.lastName = 'N/A';
-        this.birthDate = 'N/A';
+        this.firstName = this.translate.instant('generic.na');
+        this.lastName = this.translate.instant('generic.na');
+        this.birthDate = this.translate.instant('generic.na');
         this.cardIdNumber = playerId;
-        this.playerPhotoUrl =
-          'https://placehold.co/100x100/FF8C00/FFFFFF?text=API+Error';
+        this.playerPhotoUrl = `https://placehold.co/100x100/FF8C00/FFFFFF?text=${this.translate.instant(
+          'generic.apiError'
+        )}`;
       },
     });
   }
@@ -227,8 +233,8 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
         ctx.scale(ratio, ratio);
       }
 
-      this.signaturePad.clear(); // Efface la signature et applique le fond
-      this.signatureDataUrl = null; // La signature est effacée, donc pas de data URL
+      this.signaturePad.clear();
+      this.signatureDataUrl = null;
     }
   }
 
@@ -269,12 +275,9 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
 
   toggleSignaturePadSize(): void {
     this.isSignaturePadEnlarged = !this.isSignaturePadEnlarged;
-    // Il est crucial d'appeler clearSignature AVANT que le ResizeObserver ne déclenche resizeSignaturePad,
-    // ou de s'assurer que resizeSignaturePad efface toujours.
-    // L'appel à resizeSignaturePad via setTimeout permet au CSS de s'appliquer d'abord.
-    this.clearSignature(); // Effacer la signature immédiatement au changement d'état
+    this.clearSignature();
     setTimeout(() => {
-      this.resizeSignaturePad(); // Redimensionne et réapplique le fond
+      this.resizeSignaturePad();
     }, 50);
   }
 
@@ -287,19 +290,17 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   async onSubmit(): Promise<void> {
-    if (this.isSignaturePadEnlarged) {
-      this.toggleSignaturePadSize();
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    }
-
     if (!this.isSubmitEnabled() || this.buttonState !== 'idle') {
       if (this.buttonState !== 'idle') return;
-      let message = 'Validation impossible:';
+      let message = this.translate.instant('alert.validationImpossible');
       if (!this.hasScrolledToBottom)
-        message += '\n- Veuillez lire toutes les conditions.';
+        message += `\n- ${this.translate.instant('alert.mustReadConditions')}`;
       if (!this.mandatoryCheckbox)
-        message += '\n- La case de consentement obligatoire doit être cochée.';
-      if (!this.signatureDataUrl) message += '\n- La signature est requise.';
+        message += `\n- ${this.translate.instant(
+          'alert.mandatoryCheckboxRequired'
+        )}`;
+      if (!this.signatureDataUrl)
+        message += `\n- ${this.translate.instant('alert.signatureRequired')}`;
       alert(message);
       return;
     }
@@ -327,7 +328,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
         next: (response) => {
           this.buttonState = 'success';
           this.navigationTimer = setTimeout(() => {
-            this.router.navigate(['/logo']);
+            this.router.navigate(['/logo'], { skipLocationChange: true });
             this.buttonState = 'idle';
           }, 3000);
         },
@@ -371,7 +372,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
       lastName: this.lastName,
       firstName: this.firstName,
       birthDate: this.birthDate,
-      playerId: this.currentPlayerId || 'N/A',
+      playerId: this.currentPlayerId || this.translate.instant('generic.na'),
       playerPhotoUrl: this.playerPhotoUrl,
       consentText: this.rulesText,
       mandatoryCheckboxChecked: this.mandatoryCheckbox,

@@ -4,19 +4,21 @@ import {
   RouterOutlet,
   ActivatedRoute,
   NavigationEnd,
+  QueryParamsHandling,
 } from '@angular/router';
 import { DOCUMENT } from '@angular/common';
 import { Subscription } from 'rxjs';
-import { filter } from 'rxjs/operators';
+import { filter, distinctUntilChanged, map } from 'rxjs/operators';
 import {
   AppWebSocketService,
   WebSocketMessage,
 } from './Services/websocket.service';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, TranslateModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
 })
@@ -26,16 +28,30 @@ export class AppComponent implements OnInit, OnDestroy {
   private webSocketSubscription: Subscription | undefined;
   private queryParamSubscription: Subscription | undefined;
   private routerEventsSubscription: Subscription | undefined;
+  private langParamSubscription: Subscription | undefined;
 
   constructor(
     private renderer: Renderer2,
     @Inject(DOCUMENT) private document: Document,
     private router: Router,
     private activatedRoute: ActivatedRoute,
-    private webSocketService: AppWebSocketService
-  ) {}
+    private webSocketService: AppWebSocketService,
+    private translate: TranslateService
+  ) {
+    translate.setDefaultLang('fr');
+  }
 
   ngOnInit(): void {
+    this.langParamSubscription = this.activatedRoute.queryParamMap
+      .pipe(
+        map((params) => params.get('lang')),
+        distinctUntilChanged()
+      )
+      .subscribe((lang) => {
+        const languageToUse = lang || this.translate.getDefaultLang();
+        this.translate.use(languageToUse);
+      });
+
     this.routerEventsSubscription = this.router.events
       .pipe(filter((event) => event instanceof NavigationEnd))
       .subscribe((event) => {
@@ -46,6 +62,7 @@ export class AppComponent implements OnInit, OnDestroy {
           ) {
             this.router.navigate(['/logo'], {
               queryParamsHandling: 'preserve',
+              skipLocationChange: true,
             });
           }
         }
@@ -111,9 +128,13 @@ export class AppComponent implements OnInit, OnDestroy {
     if (message.Action === 'Consent' && message.PlayerId) {
       this.router.navigate(['/consent', message.PlayerId], {
         queryParamsHandling: 'preserve',
+        skipLocationChange: true,
       });
     } else if (message.Action === 'Idle') {
-      this.router.navigate(['/logo'], { queryParamsHandling: 'preserve' });
+      this.router.navigate(['/logo'], {
+        queryParamsHandling: 'preserve',
+        skipLocationChange: true,
+      });
     }
   }
 
@@ -166,6 +187,9 @@ export class AppComponent implements OnInit, OnDestroy {
     }
     if (this.routerEventsSubscription) {
       this.routerEventsSubscription.unsubscribe();
+    }
+    if (this.langParamSubscription) {
+      this.langParamSubscription.unsubscribe();
     }
     this.webSocketService.closeConnection();
   }

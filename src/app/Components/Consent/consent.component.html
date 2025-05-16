@@ -1,18 +1,18 @@
 <div class="consent-container">
   <header class="player-info-header">
     <div class="player-details">
-      <h2>Informations du Joueur</h2>
-      <p><strong>Nom:</strong> {{ lastName }}</p>
-      <p><strong>Prénom:</strong> {{ firstName }}</p>
-      <p><strong>Né(e) le:</strong> {{ birthDate }}</p>
-      <p><strong>ID:</strong> {{ cardIdNumber }}</p>
+      <h2>{{ 'consent.playerInfoTitle' | translate }}</h2>
+      <p><strong>{{ 'consent.lastNameLabel' | translate }}:</strong> {{ lastName }}</p>
+      <p><strong>{{ 'consent.firstNameLabel' | translate }}:</strong> {{ firstName }}</p>
+      <p><strong>{{ 'consent.birthDateLabel' | translate }}</strong> {{ birthDate }}</p>
+      <p><strong>{{ 'generic.playerID' | translate }}:</strong> {{ cardIdNumber }}</p>
     </div>
     <img [src]="playerPhotoUrl" alt="Photo du Joueur" class="player-photo">
   </header>
 
   <section class="conditions-section">
     <div class="conditions-controls-header">
-      <h2>Protection de la vie privée</h2>
+      <h2>{{ 'consent.privacyPolicyTitle' | translate }}</h2>
       <div class="text-size-slider-container">
         <span class="slider-label small-text-icon">A</span>
         <input
@@ -39,19 +39,19 @@
     <div class="checkbox-group">
       <label>
         <input type="checkbox" [(ngModel)]="mandatoryCheckbox">
-        <span [style.font-size.px]="getScaledCheckboxLabelSize()"><strong>Consentement:</strong> Je déclare avoir pris connaissance et je donne mon consentement aux conditions d'utilisation et à la politique de confidentialité. (Obligatoire)</span>
+        <span [style.font-size.px]="getScaledCheckboxLabelSize()"><strong>{{ 'consent.mandatoryConsentLabelBold' | translate }}</strong>{{ 'consent.mandatoryConsentLabelText' | translate }}</span>
       </label>
       <label>
         <input type="checkbox" [(ngModel)]="optionalCheckbox">
-        <span [style.font-size.px]="getScaledCheckboxLabelSize()"><strong>Communications:</strong> J'accepte d'être contacté(e) par SMS et e-mail pour des avantages promotionnels et des informations du casino.</span>
+        <span [style.font-size.px]="getScaledCheckboxLabelSize()"><strong>{{ 'consent.optionalCommunicationsLabelBold' | translate }}</strong>{{ 'consent.optionalCommunicationsLabelText' | translate }}</span>
       </label>
     </div>
 
     <div class="signature-area">
       <div class="signature-header">
-        <label for="signaturePadCanvas" class="signature-label">Signature Manuscrite:</label>
+        <label for="signaturePadCanvas" class="signature-label">{{ 'consent.signatureLabel' | translate }}:</label>
         <div class="signature-controls">
-          <button type="button" (click)="toggleSignaturePadSize()" class="signature-size-toggle-button" title="{{ isSignaturePadEnlarged ? 'Réduire la zone de signature' : 'Agrandir la zone de signature' }}">
+          <button type="button" (click)="toggleSignaturePadSize()" class="signature-size-toggle-button" [title]="(isSignaturePadEnlarged ? 'Réduire' : 'Agrandir') + ' la zone de signature'">
             <svg *ngIf="!isSignaturePadEnlarged" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="icon">
               <path d="M3 8.25V3h5.25L3 8.25ZM4.75 4.75H3V3h1.75v1.75ZM11.75 3H17v5.25L11.75 3ZM15.25 4.75H17V3h-1.75v1.75ZM3 11.75V17h5.25L3 11.75ZM4.75 15.25H3V17h1.75v-1.75ZM11.75 17H17v-5.25L11.75 17ZM15.25 15.25H17V17h-1.75v-1.75Z" />
             </svg>
@@ -59,7 +59,7 @@
               <path d="M8.25 3H3v5.25L8.25 3ZM4.75 4.75V3h1.75L4.75 4.75ZM3 11.75V17h5.25L3 11.75ZM4.75 15.25V17h1.75L4.75 15.25ZM11.75 3H17v5.25L11.75 3ZM15.25 4.75V3h1.75L15.25 4.75ZM11.75 17H17v-5.25L11.75 17ZM15.25 15.25V17h1.75L15.25 15.25Z" />
             </svg>
           </button>
-          <button type="button" (click)="clearSignature()" class="clear-signature-button">Effacer</button>
+          <button type="button" (click)="clearSignature()" class="clear-signature-button">{{ 'consent.clearButton' | translate }}</button>
         </div>
       </div>
       <div class="signature-pad-wrapper" #signaturePadWrapper [class.enlarged]="isSignaturePadEnlarged">
@@ -74,7 +74,7 @@
       class="validate-button"
       [class.loading]="buttonState === 'loading'"
       [class.success]="buttonState === 'success'">
-      <span *ngIf="buttonState === 'idle'">Valider</span>
+      <span *ngIf="buttonState === 'idle'">{{ 'consent.validateButton.idle' | translate }}</span>
       <div *ngIf="buttonState === 'loading'" class="spinner"></div>
       <svg *ngIf="buttonState === 'success'" class="checkmark-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
         <path fill-rule="evenodd" d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.454-12.68a.75.75 0 0 1 1.04-.208Z" clip-rule="evenodd" />
