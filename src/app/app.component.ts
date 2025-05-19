@@ -4,31 +4,30 @@ import {
   RouterOutlet,
   ActivatedRoute,
   NavigationEnd,
-  QueryParamsHandling,
+  UrlTree,
 } from '@angular/router';
 import { DOCUMENT } from '@angular/common';
-import { Subscription } from 'rxjs';
-import { filter, distinctUntilChanged, map } from 'rxjs/operators';
+import { Subscription, ReplaySubject, timer } from 'rxjs';
+import { filter, takeUntil, tap } from 'rxjs/operators';
 import {
   AppWebSocketService,
   WebSocketMessage,
 } from './Services/websocket.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { ConfigService } from './Services/config.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [RouterOutlet, TranslateModule],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.scss',
+  styleUrls: ['./app.component.scss'],
 })
 export class AppComponent implements OnInit, OnDestroy {
   title = 'app';
   private listeners: Array<() => void> = [];
-  private webSocketSubscription: Subscription | undefined;
-  private queryParamSubscription: Subscription | undefined;
-  private routerEventsSubscription: Subscription | undefined;
-  private langParamSubscription: Subscription | undefined;
+  private destroy$ = new ReplaySubject<void>(1);
+  private initialLaunchParamsProcessed = false;
 
   constructor(
     private renderer: Renderer2,
@@ -36,64 +35,148 @@ export class AppComponent implements OnInit, OnDestroy {
     private router: Router,
     private activatedRoute: ActivatedRoute,
     private webSocketService: AppWebSocketService,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private configService: ConfigService
   ) {
     translate.setDefaultLang('fr');
   }
 
   ngOnInit(): void {
-    this.langParamSubscription = this.activatedRoute.queryParamMap
+    this.processLaunchUrlParameters();
+    this.setupUrlCleaningOnNavigation();
+    this.handleWebSocketMessages();
+    this.setupDOMListeners();
+  }
+
+  private processLaunchUrlParameters(): void {
+    this.activatedRoute.queryParamMap
       .pipe(
-        map((params) => params.get('lang')),
-        distinctUntilChanged()
-      )
-      .subscribe((lang) => {
-        const languageToUse = lang || this.translate.getDefaultLang();
-        this.translate.use(languageToUse);
-      });
-
-    this.routerEventsSubscription = this.router.events
-      .pipe(filter((event) => event instanceof NavigationEnd))
-      .subscribe((event) => {
-        if (event instanceof NavigationEnd) {
-          if (
-            event.urlAfterRedirects === '/' ||
-            event.urlAfterRedirects.startsWith('/?')
-          ) {
-            this.router.navigate(['/logo'], {
-              queryParamsHandling: 'preserve',
-              skipLocationChange: true,
-            });
+        tap((params) => {
+          if (this.initialLaunchParamsProcessed) {
+            return;
           }
-        }
-      });
 
-    this.queryParamSubscription = this.activatedRoute.queryParamMap.subscribe(
-      (params) => {
-        const wsPort = params.get('wsPort');
-        if (wsPort) {
-          const wsUrl = `ws://localhost:${wsPort}`;
-          this.webSocketService.connect(wsUrl);
-        } else {
+          const wsPort = params.get('wsPort');
+
+          if (wsPort !== null) {
+            const token = params.get('token');
+            const lang = params.get('lang');
+
+            this.configService.setWsPort(wsPort);
+            this.configService.setToken(token);
+            this.configService.setLang(lang);
+
+            const languageToUse =
+              this.configService.getLang() || this.translate.getDefaultLang();
+            this.translate.use(languageToUse);
+
+            if (this.configService.getWsPort()) {
+              const wsUrl = `ws://localhost:${this.configService.getWsPort()}`;
+              this.webSocketService.connect(wsUrl);
+            } else {
+              console.warn(
+                "WARN: 'wsPort' a été détecté mais n'a pas pu être configuré. La connexion WebSocket pourrait échouer."
+              );
+            }
+            this.initialLaunchParamsProcessed = true;
+          }
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe();
+
+    timer(5000)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        if (!this.initialLaunchParamsProcessed) {
           console.warn(
-            "Le paramètre wsPort est manquant dans l'URL actuelle. La connexion WebSocket pourrait ne pas être initiée si elle n'a pas déjà été établie."
+            "WARN: Aucun paramètre 'wsPort' détecté dans l'URL après 5 secondes. Assurez-vous que l'URL de lancement contient les paramètres attendus. La connexion WebSocket ne sera pas initiée."
           );
         }
-      }
-    );
+      });
+  }
 
-    this.webSocketSubscription = this.webSocketService.messages$.subscribe(
-      (message: WebSocketMessage) => {
-        this.handleWebSocketMessage(message);
-      }
-    );
+  private setupUrlCleaningOnNavigation(): void {
+    this.router.events
+      .pipe(
+        filter(
+          (event): event is NavigationEnd => event instanceof NavigationEnd
+        ),
+        tap((event: NavigationEnd) => {
+          if (this.initialLaunchParamsProcessed) {
+            this.cleanUrlParamsFromNavigation(event);
+          }
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe();
+  }
 
+  private cleanUrlParamsFromNavigation(navigationEvent: NavigationEnd): void {
+    const urlTree: UrlTree = this.router.parseUrl(
+      navigationEvent.urlAfterRedirects
+    );
+    const queryParams = { ...urlTree.queryParams };
+
+    let paramsModified = false;
+    if (queryParams['wsPort'] !== undefined) {
+      delete queryParams['wsPort'];
+      paramsModified = true;
+    }
+    if (queryParams['token'] !== undefined) {
+      delete queryParams['token'];
+      paramsModified = true;
+    }
+    if (queryParams['lang'] !== undefined) {
+      delete queryParams['lang'];
+      paramsModified = true;
+    }
+
+    if (paramsModified) {
+      const pathOnly = navigationEvent.urlAfterRedirects.split('?')[0];
+      this.router.navigate([pathOnly || '/'], {
+        queryParams: queryParams,
+        replaceUrl: true,
+        skipLocationChange: true,
+      });
+    } else if (
+      (navigationEvent.urlAfterRedirects === '/' ||
+        navigationEvent.urlAfterRedirects === '/#') &&
+      !paramsModified
+    ) {
+      this.router.navigate(['/logo'], {
+        replaceUrl: true,
+        skipLocationChange: true,
+      });
+    }
+  }
+
+  private handleWebSocketMessages(): void {
+    this.webSocketService.messages$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((message: WebSocketMessage) => {
+        const cleanQueryParams = {};
+
+        if (message.Action === 'Consent' && message.PlayerId) {
+          this.router.navigate(['/consent', message.PlayerId], {
+            queryParams: cleanQueryParams,
+            skipLocationChange: true,
+          });
+        } else if (message.Action === 'Idle') {
+          this.router.navigate(['/logo'], {
+            queryParams: cleanQueryParams,
+            skipLocationChange: true,
+          });
+        }
+      });
+  }
+
+  private setupDOMListeners(): void {
     this.listeners.push(
-      this.renderer.listen('window', 'contextmenu', (e: Event) => {
-        e.preventDefault();
-      })
+      this.renderer.listen('window', 'contextmenu', (e: Event) =>
+        e.preventDefault()
+      )
     );
-
     const touchStartListener = this.renderer.listen(
       this.document.body,
       'touchstart',
@@ -119,23 +202,10 @@ export class AppComponent implements OnInit, OnDestroy {
     this.listeners.push(
       this.renderer.listen('document', 'fullscreenchange', () => {
         if (!this.document.fullscreenElement) {
+          // Logic for when exiting fullscreen if needed
         }
       })
     );
-  }
-
-  private handleWebSocketMessage(message: WebSocketMessage): void {
-    if (message.Action === 'Consent' && message.PlayerId) {
-      this.router.navigate(['/consent', message.PlayerId], {
-        queryParamsHandling: 'preserve',
-        skipLocationChange: true,
-      });
-    } else if (message.Action === 'Idle') {
-      this.router.navigate(['/logo'], {
-        queryParamsHandling: 'preserve',
-        skipLocationChange: true,
-      });
-    }
   }
 
   requestFullScreen(): void {
@@ -155,7 +225,7 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
-  onKeydownHandler(event: KeyboardEvent) {
+  onKeydownHandler(event: KeyboardEvent): void {
     if (event.key === 'F11') {
       event.preventDefault();
       event.stopPropagation();
@@ -178,19 +248,9 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
     this.listeners.forEach((listener) => listener());
-    if (this.webSocketSubscription) {
-      this.webSocketSubscription.unsubscribe();
-    }
-    if (this.queryParamSubscription) {
-      this.queryParamSubscription.unsubscribe();
-    }
-    if (this.routerEventsSubscription) {
-      this.routerEventsSubscription.unsubscribe();
-    }
-    if (this.langParamSubscription) {
-      this.langParamSubscription.unsubscribe();
-    }
     this.webSocketService.closeConnection();
   }
 }

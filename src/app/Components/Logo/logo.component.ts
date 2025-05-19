@@ -12,7 +12,7 @@ export class LogoComponent {
   iframeSrc: SafeResourceUrl;
 
   constructor(private sanitizer: DomSanitizer) {
-    const unsafeIframeSrc = 'assets/logo_page/logo.png';
+    const unsafeIframeSrc = 'assets/logo_page/logo_page.html';
     this.iframeSrc =
       this.sanitizer.bypassSecurityTrustResourceUrl(unsafeIframeSrc);
   }
