@@ -73,6 +73,8 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   signatureDataUrl: string | null = null;
   hasScrolledToBottom: boolean = false;
   currentTextSizeInPx: number = 16;
+  minTextSize: number = 12;
+  maxTextSize: number = 30;
   buttonState: 'idle' | 'loading' | 'success' = 'idle';
   isSignaturePadEnlarged: boolean = false;
 
@@ -258,9 +260,29 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  onTextSizeChange(event: Event): void {
-    const sliderValue = (event.target as HTMLInputElement).value;
-    this.currentTextSizeInPx = parseInt(sliderValue, 10);
+  decreaseTextSize(): void {
+    if (this.currentTextSizeInPx > this.minTextSize) {
+      this.currentTextSizeInPx--;
+      this.applyTextSizeChangeSideEffects();
+    }
+  }
+
+  increaseTextSize(): void {
+    if (this.currentTextSizeInPx < this.maxTextSize) {
+      this.currentTextSizeInPx++;
+      this.applyTextSizeChangeSideEffects();
+    }
+  }
+
+  onTextSizeSliderChange(): void {
+    this.currentTextSizeInPx = Math.max(
+      this.minTextSize,
+      Math.min(this.maxTextSize, this.currentTextSizeInPx)
+    );
+    this.applyTextSizeChangeSideEffects();
+  }
+
+  private applyTextSizeChangeSideEffects(): void {
     this.hasScrolledToBottom = false;
     setTimeout(() => this.checkScroll(), 0);
   }

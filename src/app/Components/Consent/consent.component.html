@@ -2,10 +2,16 @@
   <header class="player-info-header">
     <div class="player-details">
       <h2>{{ 'consent.playerInfoTitle' | translate }}</h2>
-      <p><strong>{{ 'consent.lastNameLabel' | translate }}:</strong> {{ lastName }}</p>
-      <p><strong>{{ 'consent.firstNameLabel' | translate }}:</strong> {{ firstName }}</p>
-      <p><strong>{{ 'consent.birthDateLabel' | translate }}</strong> {{ birthDate }}</p>
-      <p><strong>{{ 'generic.playerID' | translate }}:</strong> {{ cardIdNumber }}</p>
+      <div class="player-info-two-line-aligned-layout">
+        <span class="info-label">{{ 'consent.lastNameLabel' | translate }}:</span>
+        <span class="info-value">{{ lastName }}</span>
+        <span class="info-label">{{ 'consent.firstNameLabel' | translate }}:</span>
+        <span class="info-value">{{ firstName }}</span>
+        <span class="info-label">{{ 'consent.birthDateLabel' | translate }}</span>
+        <span class="info-value">{{ birthDate }}</span>
+        <span class="info-label">{{ 'generic.playerID' | translate }}:</span>
+        <span class="info-value">{{ cardIdNumber }}</span>
+      </div>
     </div>
     <img [src]="playerPhotoUrl" alt="Photo du Joueur" class="player-photo">
   </header>
@@ -13,17 +19,18 @@
   <section class="conditions-section">
     <div class="conditions-controls-header">
       <h2>{{ 'consent.privacyPolicyTitle' | translate }}</h2>
-      <div class="text-size-slider-container">
-        <span class="slider-label small-text-icon">A</span>
+      <div class="text-size-controls">
+        <button type="button" (click)="decreaseTextSize()" class="text-size-btn" [disabled]="currentTextSizeInPx <= minTextSize" [attr.aria-label]="'Diminuer la taille du texte' | translate">-</button>
         <input
           type="range"
-          min="12"
-          max="30"
+          [min]="minTextSize"
+          [max]="maxTextSize"
           step="1"
-          [value]="currentTextSizeInPx"
-          (input)="onTextSizeChange($event)"
-          class="text-size-slider">
-        <span class="slider-label large-text-icon">A</span>
+          [(ngModel)]="currentTextSizeInPx"
+          (ngModelChange)="onTextSizeSliderChange()"
+          class="text-size-slider"
+          [attr.aria-label]="'Ajuster la taille du texte' | translate">
+        <button type="button" (click)="increaseTextSize()" class="text-size-btn" [disabled]="currentTextSizeInPx >= maxTextSize" [attr.aria-label]="'Augmenter la taille du texte' | translate">+</button>
       </div>
     </div>
     <div #rulesBody
@@ -51,15 +58,30 @@
       <div class="signature-header">
         <label for="signaturePadCanvas" class="signature-label">{{ 'consent.signatureLabel' | translate }}:</label>
         <div class="signature-controls">
-          <button type="button" (click)="toggleSignaturePadSize()" class="signature-size-toggle-button" [title]="(isSignaturePadEnlarged ? 'Réduire' : 'Agrandir') + ' la zone de signature'">
-            <svg *ngIf="!isSignaturePadEnlarged" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="icon">
-              <path d="M3 8.25V3h5.25L3 8.25ZM4.75 4.75H3V3h1.75v1.75ZM11.75 3H17v5.25L11.75 3ZM15.25 4.75H17V3h-1.75v1.75ZM3 11.75V17h5.25L3 11.75ZM4.75 15.25H3V17h1.75v-1.75ZM11.75 17H17v-5.25L11.75 17ZM15.25 15.25H17V17h-1.75v-1.75Z" />
-            </svg>
-            <svg *ngIf="isSignaturePadEnlarged" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="icon">
-              <path d="M8.25 3H3v5.25L8.25 3ZM4.75 4.75V3h1.75L4.75 4.75ZM3 11.75V17h5.25L3 11.75ZM4.75 15.25V17h1.75L4.75 15.25ZM11.75 3H17v5.25L11.75 3ZM15.25 4.75V3h1.75L15.25 4.75ZM11.75 17H17v-5.25L11.75 17ZM15.25 15.25V17h1.75L15.25 15.25Z" />
+          <button type="button" (click)="toggleSignaturePadSize()" class="signature-size-toggle-button" [title]="(isSignaturePadEnlarged ? ('Réduire la zone de signature' | translate) : ('Agrandir la zone de signature' | translate))">
+            <ng-container *ngIf="isSignaturePadEnlarged">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" id="minimize-left" data-name="Flat Line" class="icon">
+                <path id="primary" d="M20,20l-6-6M4,4l6,6" style="fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"/>
+                <polyline id="primary-2" data-name="primary" points="14 18 14 14 18 14" style="fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"/>
+                <polyline id="primary-3" data-name="primary" points="10 6 10 10 6 10" style="fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"/>
+              </svg>
+            </ng-container>
+            <ng-container *ngIf="!isSignaturePadEnlarged">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="icon">
+                <path d="M14 10L21 3M21 3H16.5M21 3V7.5M10 14L3 21M3 21H7.5M3 21L3 16.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </ng-container>
+          </button>
+          <button type="button" (click)="clearSignature()" class="clear-signature-button icon-button" [attr.aria-label]="'consent.clearButton' | translate">
+            <svg version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 408.483 408.483" xml:space="preserve" class="icon trash-icon">
+              <g>
+                <g>
+                  <path d="M87.748,388.784c0.461,11.01,9.521,19.699,20.539,19.699h191.911c11.018,0,20.078-8.689,20.539-19.699l13.705-289.316 H74.043L87.748,388.784z M247.655,171.329c0-4.61,3.738-8.349,8.35-8.349h13.355c4.609,0,8.35,3.738,8.35,8.349v165.293 c0,4.611-3.738,8.349-8.35,8.349h-13.355c-4.61,0-8.35-3.736-8.35-8.349V171.329z M189.216,171.329 c0-4.61,3.738-8.349,8.349-8.349h13.355c4.609,0,8.349,3.738,8.349,8.349v165.293c0,4.611-3.737,8.349-8.349,8.349h-13.355 c-4.61,0-8.349-3.736-8.349-8.349V171.329L189.216,171.329z M130.775,171.329c0-4.61,3.738-8.349,8.349-8.349h13.356 c4.61,0,8.349,3.738,8.349,8.349v165.293c0,4.611-3.738,8.349-8.349,8.349h-13.356c-4.61,0-8.349-3.736-8.349-8.349V171.329z"/>
+                  <path d="M343.567,21.043h-88.535V4.305c0-2.377-1.927-4.305-4.305-4.305h-92.971c-2.377,0-4.304,1.928-4.304,4.305v16.737H64.916 c-7.125,0-12.9,5.776-12.9,12.901V74.47h304.451V33.944C356.467,26.819,350.692,21.043,343.567,21.043z"/>
+                </g>
+              </g>
             </svg>
           </button>
-          <button type="button" (click)="clearSignature()" class="clear-signature-button">{{ 'consent.clearButton' | translate }}</button>
         </div>
       </div>
       <div class="signature-pad-wrapper" #signaturePadWrapper [class.enlarged]="isSignaturePadEnlarged">

@@ -24,19 +24,43 @@
   padding: 1rem 1.5rem;
   background-color: #ffffff;
   border-bottom: 1px solid #e5e7eb;
+
   .player-details {
+    flex-grow: 1;
+    margin-right: 1rem;
     h2 {
       font-size: 1.1rem;
       font-weight: 600;
       color: #1f2937;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.75rem;
     }
-    p {
-      font-size: 0.8rem;
-      color: #4b5563;
-      margin-bottom: 0.2rem;  
-      strong {
+
+    .player-info-two-line-aligned-layout {
+      display: grid;
+      grid-template-columns: auto 1fr auto 1fr; 
+      gap: 0.5rem 0.5em; 
+      align-items: baseline;
+
+      // Pour ajouter un espacement plus grand entre la première paire (Nom/Valeur) et la seconde (Prénom/Valeur) sur une ligne
+      // Cible la valeur du premier item de la paire (2e enfant de la ligne) et ajoute une marge à droite.
+      // Et aussi la valeur du troisième item (6e enfant au total) pour la deuxième ligne.
+      & > .info-value:nth-child(4n-2) { // Cible la valeur de la première paire sur chaque ligne (2e, 6e, 10e enfant...)
+        margin-right: 1.5em; // Espace après la valeur de la première paire, avant l'intitulé de la seconde paire
+      }
+
+      .info-label {
         font-weight: 600;
+        color: #374151;
+        font-size: 0.8rem; 
+        text-align: left;
+        white-space: nowrap; 
+      }
+
+      .info-value {
+        color: #4b5563;
+        font-size: 0.8rem;
+        word-break: break-word; 
+        text-align: left;
       }
     }
   }
@@ -47,6 +71,7 @@
     border-radius: 50%;
     object-fit: cover;
     border: 2px solid #e5e7eb;
+    flex-shrink: 0;
   }
 }
 
@@ -68,23 +93,38 @@
       font-weight: 600;
       color: #1f2937;
       margin-right: 1rem;
+      white-space: nowrap;
     }
   }
 
-  .text-size-slider-container {
+  .text-size-controls {
     display: flex;
     align-items: center;
     gap: 0.75rem;
     flex-grow: 1;
+    min-width: 150px;
 
-    .slider-label {
-      color: #4b5563;
-      font-weight: 600;
-      &.small-text-icon {
-        font-size: 0.8rem;
+
+    .text-size-btn {
+      background-color: #f0f2f5;
+      border: 1px solid #dde1e6;
+      color: #374151;
+      padding: 0.3rem 0.7rem;
+      font-size: 1rem;
+      font-weight: bold;
+      border-radius: 0.3rem;
+      cursor: pointer;
+      line-height: 1;
+      min-width: 36px;
+      text-align: center;
+      transition: background-color 0.2s ease;
+
+      &:hover:not(:disabled) {
+        background-color: #e4e8ed;
       }
-      &.large-text-icon {
-        font-size: 1.2rem;
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
       }
     }
 
@@ -98,6 +138,7 @@
       outline: none;
       cursor: pointer;
       transition: background 0.3s ease;
+      min-width: 80px;
 
       &:hover {
         background: #c7d2fe;
@@ -243,8 +284,26 @@
       width: 18px; 
       height: 18px;
     }
-
   }
+  
+  .clear-signature-button.icon-button {
+    background-color: transparent;
+    border: none;
+    padding: 0.25rem;
+    cursor: pointer;
+    color: #ef4444; 
+
+    &:hover {
+      opacity: 0.7;
+    }
+
+    .icon.trash-icon {
+      width: 22px;
+      height: 22px;
+      fill: currentColor;
+    }
+  }
+
 
   .signature-pad-wrapper {
     border: 1px dashed #9ca3af;
@@ -265,21 +324,6 @@
 
     &.enlarged {
       height: 250px; 
-      // border-style: solid;
-      // border-color: #3b82f6;
-      // box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-  }
-
-  .clear-signature-button {
-    font-size: 0.75rem;
-    color: #3b82f6;
-    background-color: transparent;
-    border: none;
-    padding: 0.25rem;
-    cursor: pointer;
-    &:hover {
-      text-decoration: underline;
     }
   }
 }
@@ -305,15 +349,16 @@
   }
   &:disabled {
     cursor: not-allowed;
-    background-color: #929292;
+    background-color: #929292; 
+    opacity: 0.7; 
   }
 
   &.loading {
-    background-color: #1d4ed8;
+    background-color: #1d4ed8; 
   }
 
   &.success {
-    background-color: #16a34a;
+    background-color: #16a34a; 
     border-color: #16a34a;
     &:hover:not(:disabled) {
       background-color: #15803d;
