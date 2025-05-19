@@ -19,7 +19,9 @@
     "validationImpossible": "Validation impossible:",
     "mustReadConditions": "- Veuillez lire toutes les conditions.",
     "mandatoryCheckboxRequired": "- La case de consentement obligatoire doit être cochée.",
-    "signatureRequired": "- La signature est requise."
+    "signatureRequired": "- La signature est requise.",
+    "pdfGenerationError": "Erreur lors de la génération du PDF.",
+    "pdfUploadError": "Erreur lors de l'envoi du PDF au serveur."
   },
   "generic": {
     "loading": "Chargement...",

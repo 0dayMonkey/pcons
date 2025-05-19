@@ -6,7 +6,6 @@ export interface WebSocketMessage {
   Action: string;
   PlayerId?: string;
   Status?: boolean;
-  // Ajoutez ici d'autres champs si nécessaire pour la communication WebSocket
 }
 
 @Injectable({
