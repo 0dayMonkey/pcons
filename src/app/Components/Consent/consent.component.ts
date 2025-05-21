@@ -16,17 +16,18 @@ import {
   AppWebSocketService,
   WebSocketMessage,
 } from '../../Services/websocket.service';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import * as Handlebars from 'handlebars';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import {
-  PlayerDataService,
-  PlayerData,
-} from '../../Services/player-data.service';
-import { ErrorHandlerService } from '../../Services/error-handler.service';
-import { PdfService, ConsentPdfData } from '../../Services/pdf.service';
-import { Subscription, take } from 'rxjs';
 
-const PDF_UPLOAD_URL = 'http://localhost:4000/upload-pdf';
-const SUCCESS_REDIRECT_DELAY_MS = 3000;
+interface PlayerData {
+  id: string;
+  firstName: string;
+  lastName: string;
+  birthDate: string;
+  photoUrl: string;
+}
 
 @Component({
   selector: 'app-consent',
@@ -37,10 +38,12 @@ const SUCCESS_REDIRECT_DELAY_MS = 3000;
 })
 export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   consentId: string = 'CONSENT_FORM_ID';
-  player: PlayerData | undefined;
+  firstName: string = '';
+  lastName: string = '';
+  birthDate: string = '';
+  cardIdNumber: string = '';
+  playerPhotoUrl: string = 'https://placehold.co/100x100/E0E0E0/757575?text=';
   private currentPlayerId: string | null = null;
-  private dataSubscription: Subscription | undefined;
-  private uploadSubscription: Subscription | undefined;
 
   rulesText: string = `
     1. Qui est responsable du traitement des données à caractère personnel ?
@@ -94,38 +97,55 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     private router: Router,
     private webSocketService: AppWebSocketService,
     private renderer: Renderer2,
-    private translate: TranslateService,
-    private playerDataService: PlayerDataService,
-    private pdfService: PdfService,
-    private errorHandlerService: ErrorHandlerService
+    private translate: TranslateService
   ) {
-    this.player = this.playerDataService.getLoadingPlayerData();
+    this.playerPhotoUrl = `https://placehold.co/100x100/E0E0E0/757575?text=${this.translate.instant(
+      'generic.loading'
+    )}`;
   }
 
   ngOnInit(): void {
     this.currentPlayerId = this.route.snapshot.paramMap.get('playerId');
     if (this.currentPlayerId) {
+      this.fetchAndSetUserData(this.currentPlayerId);
       this.consentId = `CONSENT_${
         this.currentPlayerId
       }_${new Date().getTime()}`;
-      this.loadPlayerData(this.currentPlayerId);
     } else {
-      this.player = this.playerDataService.getFallbackPlayerData(null);
-      this.errorHandlerService.handlePlayerIdError();
+      this.firstName = this.translate.instant('generic.error');
+      this.lastName = this.translate.instant('generic.playerID');
+      this.birthDate = this.translate.instant('generic.na');
+      this.cardIdNumber = this.translate.instant('generic.na');
+      this.playerPhotoUrl = `https://placehold.co/100x100/FF0000/FFFFFF?text=${this.translate.instant(
+        'generic.error'
+      )}+ID`;
     }
   }
 
-  private loadPlayerData(playerId: string): void {
-    this.dataSubscription = this.playerDataService
-      .fetchPlayerData(playerId)
-      .subscribe((data) => {
-        if (data) {
-          this.player = data;
-        } else {
-          this.player = this.playerDataService.getFallbackPlayerData(playerId);
-          this.errorHandlerService.handleApiError();
-        }
-      });
+  fetchAndSetUserData(playerId: string): void {
+    const apiUrl = `http://localhost:3000/player/${playerId}`;
+    this.http.get<PlayerData>(apiUrl).subscribe({
+      next: (playerData) => {
+        this.firstName = playerData.firstName;
+        this.lastName = playerData.lastName;
+        this.birthDate = playerData.birthDate;
+        this.playerPhotoUrl =
+          playerData.photoUrl ||
+          `https://placehold.co/100x100/E0E0E0/757575?text=${this.translate.instant(
+            'generic.na'
+          )}`;
+        this.cardIdNumber = playerData.id;
+      },
+      error: (err) => {
+        this.firstName = this.translate.instant('generic.na');
+        this.lastName = this.translate.instant('generic.na');
+        this.birthDate = this.translate.instant('generic.na');
+        this.cardIdNumber = playerId;
+        this.playerPhotoUrl = `https://placehold.co/100x100/FF8C00/FFFFFF?text=${this.translate.instant(
+          'generic.apiError'
+        )}`;
+      },
+    });
   }
 
   ngAfterViewInit(): void {
@@ -169,12 +189,6 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     if (this.navigationTimer) {
       clearTimeout(this.navigationTimer);
-    }
-    if (this.dataSubscription) {
-      this.dataSubscription.unsubscribe();
-    }
-    if (this.uploadSubscription) {
-      this.uploadSubscription.unsubscribe();
     }
   }
 
@@ -298,17 +312,18 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   async onSubmit(): Promise<void> {
-    if (
-      !this.player ||
-      !this.isSubmitEnabled() ||
-      this.buttonState !== 'idle'
-    ) {
+    if (!this.isSubmitEnabled() || this.buttonState !== 'idle') {
       if (this.buttonState !== 'idle') return;
-      this.errorHandlerService.displayValidationAlert(
-        this.hasScrolledToBottom,
-        this.mandatoryCheckbox,
-        this.signatureDataUrl
-      );
+      let message = this.translate.instant('alert.validationImpossible');
+      if (!this.hasScrolledToBottom)
+        message += `\n- ${this.translate.instant('alert.mustReadConditions')}`;
+      if (!this.mandatoryCheckbox)
+        message += `\n- ${this.translate.instant(
+          'alert.mandatoryCheckboxRequired'
+        )}`;
+      if (!this.signatureDataUrl)
+        message += `\n- ${this.translate.instant('alert.signatureRequired')}`;
+      alert(message);
       return;
     }
 
@@ -321,6 +336,49 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     };
     this.webSocketService.sendMessage(consentResponse);
 
+    try {
+      const pdfBlob = await this.generateConsentPdfAsBlob();
+      const formData = new FormData();
+      const pdfFileName = `Consentement_${this.lastName}_${this.firstName}_${this.currentPlayerId}.pdf`;
+      formData.append('pdfFile', pdfBlob, pdfFileName);
+      formData.append('playerId', this.currentPlayerId || 'unknown');
+      formData.append('consentId', this.consentId);
+
+      const uploadUrl = 'http://localhost:4000/upload-pdf';
+
+      this.http.post(uploadUrl, formData).subscribe({
+        next: (response) => {
+          this.buttonState = 'success';
+          this.navigationTimer = setTimeout(() => {
+            this.router.navigate(['/logo'], { skipLocationChange: true });
+            this.buttonState = 'idle';
+          }, 3000);
+        },
+        error: (err) => {
+          console.error("Erreur lors de l'envoi du PDF au serveur:", err);
+          alert(
+            "Erreur lors de l'envoi du PDF au serveur. Vérifiez la console pour plus de détails."
+          );
+          this.buttonState = 'idle';
+        },
+      });
+    } catch (error) {
+      console.error('Erreur lors de la génération du PDF :', error);
+      alert('Erreur lors de la génération du PDF.');
+      this.buttonState = 'idle';
+    }
+  }
+
+  private async generateConsentPdfAsBlob(): Promise<Blob> {
+    const templateString = await this.http
+      .get('assets/template/template.html', { responseType: 'text' })
+      .toPromise();
+
+    if (!templateString) {
+      throw new Error("Le template HTML n'a pas pu être chargé.");
+    }
+
+    const template = Handlebars.compile(templateString);
     const now = new Date();
     const consentDate = now.toLocaleString('fr-FR', {
       day: '2-digit',
@@ -330,79 +388,117 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
       minute: '2-digit',
       second: '2-digit',
     });
+    const generationDate = consentDate;
 
-    const pdfData: ConsentPdfData = {
-      playerData: this.player,
-      rulesText: this.rulesText,
+    const data = {
+      lastName: this.lastName,
+      firstName: this.firstName,
+      birthDate: this.birthDate,
+      playerId: this.currentPlayerId || this.translate.instant('generic.na'),
+      playerPhotoUrl: this.playerPhotoUrl,
+      consentText: this.rulesText,
       mandatoryCheckboxChecked: this.mandatoryCheckbox,
       optionalCheckboxChecked: this.optionalCheckbox,
       signatureImageUrl: this.signatureDataUrl,
       consentDate: consentDate,
-      generationDate: consentDate,
+      generationDate: generationDate,
       consentFormId: this.consentId,
-      currentTextSizeInPx: this.currentTextSizeInPx,
-      scaledCheckboxLabelSize: this.getScaledCheckboxLabelSize(),
     };
 
-    try {
-      const pdfBlob = await this.pdfService.generateConsentPdfAsBlob(pdfData);
-      const formData = new FormData();
-      const pdfFileName = `Consentement_${this.player.lastName}_${this.player.firstName}_${this.currentPlayerId}.pdf`;
-      formData.append('pdfFile', pdfBlob, pdfFileName);
-      formData.append('playerId', this.currentPlayerId || 'unknown');
-      formData.append('consentId', this.consentId);
+    const processedHtml = template(data);
+    const printableElement = document.createElement('div');
+    printableElement.style.position = 'absolute';
+    printableElement.style.left = '-9999px';
+    printableElement.style.top = '0px';
+    printableElement.innerHTML = processedHtml;
+    document.body.appendChild(printableElement);
 
-      this.uploadSubscription = this.http
-        .post(PDF_UPLOAD_URL, formData)
-        .pipe(take(1))
-        .subscribe({
-          next: () => {
-            this.buttonState = 'success';
-            this.navigationTimer = setTimeout(() => {
-              this.router.navigate(['/logo'], { skipLocationChange: true });
-              this.buttonState = 'idle';
-            }, SUCCESS_REDIRECT_DELAY_MS);
-          },
-          error: () => {
-            this.errorHandlerService.handlePdfUploadError();
-            this.buttonState = 'idle';
-          },
-        });
-    } catch (error) {
-      this.errorHandlerService.handlePdfGenerationError();
-      this.buttonState = 'idle';
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    const containerToPrint = printableElement.querySelector(
+      '.container'
+    ) as HTMLElement;
+    if (!containerToPrint) {
+      document.body.removeChild(printableElement);
+      throw new Error(
+        "Élément '.container' non trouvé dans le template rendu."
+      );
     }
-  }
 
-  get playerLastName(): string {
-    return this.player
-      ? this.player.lastName
-      : this.translate.instant('generic.loading');
-  }
+    const canvas = await html2canvas(containerToPrint, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      width: containerToPrint.offsetWidth,
+      height: containerToPrint.offsetHeight,
+      windowWidth: containerToPrint.scrollWidth,
+      windowHeight: containerToPrint.scrollHeight,
+      onclone: (clonedDoc) => {
+        const playerPhotoImg = clonedDoc.querySelector(
+          '.player-photo'
+        ) as HTMLImageElement;
+        if (
+          playerPhotoImg &&
+          data.playerPhotoUrl &&
+          data.playerPhotoUrl.startsWith('data:image')
+        ) {
+          playerPhotoImg.src = data.playerPhotoUrl;
+        }
+        const signatureImg = clonedDoc.querySelector(
+          '.signature-image'
+        ) as HTMLImageElement;
+        if (signatureImg && data.signatureImageUrl) {
+          signatureImg.src = data.signatureImageUrl;
+        }
+        const preElementClone = clonedDoc.querySelector(
+          '.conditions-content pre'
+        ) as HTMLElement;
+        if (preElementClone) {
+          preElementClone.style.fontSize = this.currentTextSizeInPx + 'px';
+        }
+        const checkboxLabelSpans = clonedDoc.querySelectorAll(
+          '.checkbox-group label span'
+        ) as NodeListOf<HTMLElement>;
+        checkboxLabelSpans.forEach((span) => {
+          span.style.fontSize = this.getScaledCheckboxLabelSize() + 'px';
+        });
+      },
+    });
 
-  get playerFirstName(): string {
-    return this.player
-      ? this.player.firstName
-      : this.translate.instant('generic.loading');
-  }
+    document.body.removeChild(printableElement);
 
-  get playerBirthDate(): string {
-    return this.player
-      ? this.player.birthDate
-      : this.translate.instant('generic.loading');
-  }
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'pt',
+      format: 'a4',
+    });
 
-  get playerCardIdNumber(): string {
-    return this.player
-      ? this.player.id
-      : this.translate.instant('generic.loading');
-  }
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const canvasWidth = canvas.width;
+    const canvasHeight = canvas.height;
+    const ratio = canvasWidth / pdfWidth;
+    const projectedCanvasHeight = canvasHeight / ratio;
+    let position = 0;
+    let heightLeft = projectedCanvasHeight;
 
-  get playerPhotoUrl(): string {
-    return this.player
-      ? this.player.photoUrl
-      : `https://placehold.co/100x100/E0E0E0/757575?text=${this.translate.instant(
-          'generic.loading'
-        )}`;
+    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, projectedCanvasHeight);
+    heightLeft -= pdfHeight;
+
+    while (heightLeft > 0) {
+      position -= pdfHeight;
+      pdf.addPage();
+      pdf.addImage(
+        imgData,
+        'PNG',
+        0,
+        position,
+        pdfWidth,
+        projectedCanvasHeight
+      );
+      heightLeft -= pdfHeight;
+    }
+    return pdf.output('blob');
   }
 }
