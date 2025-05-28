@@ -19,7 +19,8 @@
     "validationImpossible": "Validation impossible:",
     "mustReadConditions": "- Please read all conditions.",
     "mandatoryCheckboxRequired": "- The mandatory consent checkbox must be checked.",
-    "signatureRequired": "- Signature is required."
+    "signatureRequired": "- Signature is required.",
+    "thankYou": "Thank you for your trust!"
   },
   "generic": {
     "loading": "Loading...",

@@ -20,17 +20,24 @@
     <div class="conditions-controls-header">
       <h2>{{ 'consent.privacyPolicyTitle' | translate }}</h2>
       <div class="text-size-controls">
-        <button type="button" (click)="decreaseTextSize()" class="text-size-btn" [disabled]="currentTextSizeInPx <= minTextSize" [attr.aria-label]="'Diminuer la taille du texte' | translate">-</button>
-        <input
-          type="range"
-          [min]="minTextSize"
-          [max]="maxTextSize"
-          step="1"
-          [(ngModel)]="currentTextSizeInPx"
-          (ngModelChange)="onTextSizeSliderChange()"
-          class="text-size-slider"
-          [attr.aria-label]="'Ajuster la taille du texte' | translate">
-        <button type="button" (click)="increaseTextSize()" class="text-size-btn" [disabled]="currentTextSizeInPx >= maxTextSize" [attr.aria-label]="'Augmenter la taille du texte' | translate">+</button>
+        <button
+          type="button"
+          (click)="setTextSize('small')"
+          class="text-size-btn font-small"
+          [class.active]="currentTextSizeInPx === predefinedTextSizes.small"
+          [attr.aria-label]="'Petite taille de texte' | translate">A</button>
+        <button
+          type="button"
+          (click)="setTextSize('medium')"
+          class="text-size-btn font-medium"
+          [class.active]="currentTextSizeInPx === predefinedTextSizes.medium"
+          [attr.aria-label]="'Taille de texte moyenne' | translate">A</button>
+        <button
+          type="button"
+          (click)="setTextSize('large')"
+          class="text-size-btn font-large"
+          [class.active]="currentTextSizeInPx === predefinedTextSizes.large"
+          [attr.aria-label]="'Grande taille de texte' | translate">A</button>
       </div>
     </div>
     <div #rulesBody
@@ -57,35 +64,31 @@
     <div class="signature-area">
       <div class="signature-header">
         <label for="signaturePadCanvas" class="signature-label">{{ 'consent.signatureLabel' | translate }}:</label>
-        <div class="signature-controls">
-          <button type="button" (click)="toggleSignaturePadSize()" class="signature-size-toggle-button" [title]="(isSignaturePadEnlarged ? ('Réduire la zone de signature' | translate) : ('Agrandir la zone de signature' | translate))">
-            <ng-container *ngIf="isSignaturePadEnlarged">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" id="minimize-left" data-name="Flat Line" class="icon">
-                <path id="primary" d="M20,20l-6-6M4,4l6,6" style="fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"/>
-                <polyline id="primary-2" data-name="primary" points="14 18 14 14 18 14" style="fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"/>
-                <polyline id="primary-3" data-name="primary" points="10 6 10 10 6 10" style="fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2;"/>
-              </svg>
-            </ng-container>
-            <ng-container *ngIf="!isSignaturePadEnlarged">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" class="icon">
-                <path d="M14 10L21 3M21 3H16.5M21 3V7.5M10 14L3 21M3 21H7.5M3 21L3 16.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </ng-container>
-          </button>
-          <button type="button" (click)="clearSignature()" class="clear-signature-button icon-button" [attr.aria-label]="'consent.clearButton' | translate">
-            <svg version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 408.483 408.483" xml:space="preserve" class="icon trash-icon">
-              <g>
-                <g>
-                  <path d="M87.748,388.784c0.461,11.01,9.521,19.699,20.539,19.699h191.911c11.018,0,20.078-8.689,20.539-19.699l13.705-289.316 H74.043L87.748,388.784z M247.655,171.329c0-4.61,3.738-8.349,8.35-8.349h13.355c4.609,0,8.35,3.738,8.35,8.349v165.293 c0,4.611-3.738,8.349-8.35,8.349h-13.355c-4.61,0-8.35-3.736-8.35-8.349V171.329z M189.216,171.329 c0-4.61,3.738-8.349,8.349-8.349h13.355c4.609,0,8.349,3.738,8.349,8.349v165.293c0,4.611-3.737,8.349-8.349,8.349h-13.355 c-4.61,0-8.349-3.736-8.349-8.349V171.329L189.216,171.329z M130.775,171.329c0-4.61,3.738-8.349,8.349-8.349h13.356 c4.61,0,8.349,3.738,8.349,8.349v165.293c0,4.611-3.738,8.349-8.349,8.349h-13.356c-4.61,0-8.349-3.736-8.349-8.349V171.329z"/>
-                  <path d="M343.567,21.043h-88.535V4.305c0-2.377-1.927-4.305-4.305-4.305h-92.971c-2.377,0-4.304,1.928-4.304,4.305v16.737H64.916 c-7.125,0-12.9,5.776-12.9,12.901V74.47h304.451V33.944C356.467,26.819,350.692,21.043,343.567,21.043z"/>
-                </g>
-              </g>
-            </svg>
-          </button>
         </div>
-      </div>
-      <div class="signature-pad-wrapper" #signaturePadWrapper [class.enlarged]="isSignaturePadEnlarged">
+      <div class="signature-pad-wrapper" #signaturePadWrapper>
         <canvas #signaturePadCanvas id="signaturePadCanvas"></canvas>
+        <button *ngIf="signatureDataUrl" type="button" (click)="clearSignature()" class="clear-signature-button icon-button" [attr.aria-label]="'consent.clearButton' | translate">
+            <svg fill="currentColor" version="1.1" id="Capa_1_Eraser" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+                 viewBox="0 0 456.708 456.708" xml:space="preserve" class="icon eraser-icon-new">
+            <g>
+                <g>
+                    <path d="M444.389,160.832c-0.036-0.332-0.097-0.649-0.214-1.284c0.214-3.801-0.106-7.196-0.97-10.364
+                        c-5.443-20.066-16.3-35.317-32.26-45.316c-9.729-6.093-21.292-9.064-35.358-9.064c-2.392,0-4.783,0.089-7.175,0.241
+                        c-2.62-0.604-5.18-0.912-7.811-0.932c-62.276-0.536-101.788,1.378-143.958,3.443c-31.996,1.569-65.041,3.187-110.783,3.895
+                        c10.222-13.573,19.301-26.697,27.652-39.986c6.434-10.229,7.01-21.231,1.623-30.971c-6.058-10.966-18.776-18.329-31.656-18.329
+                        c-11.283,0-20.977,5.538-27.299,15.6c-17.991,28.62-39.882,56.538-66.928,85.349c-7.871,8.389-10.846,18.839-8.439,29.114
+                        c0.724,7.129,4.207,13.848,10.077,19.428c34.518,32.793,61.241,60.489,84.104,87.154c6.188,7.221,13.848,11.034,22.14,11.034
+                        c12.309,0,24.496-8.526,30.331-21.206c5.804-12.624,3.92-25.945-5.174-36.554c-8.511-9.927-17.631-20.03-28.302-31.346
+                        c2.61,0.272,5.705,0.401,9.318,0.401c14.071,0,33.154-2.064,47.09-3.577c7.29-0.79,13.586-1.473,16.577-1.559
+                        c14.985-0.46,22.084-0.963,28.947-1.453c6.787-0.482,13.802-0.978,28.544-1.439c52.531-1.638,67.521-1.696,117.189-1.866
+                        l6.652-0.025l0.01,0.066l0.563-0.025c1.731,0,3.28,0.716,4.732,2.188c11.761,11.908,11.146,63.62,10.842,88.479
+                        c-0.076,6.53-0.137,11.689-0.01,14.854c0.746,17.798,1.314,35.611,1.894,53.405c0.975,30.279,1.99,61.596,3.813,92.368
+                        c1.244,21.002,18.581,31.991,35.063,31.991c9.45,0,18.164-3.493,23.907-9.582c5.459-5.794,8.059-13.649,7.516-22.714
+                        c-1.655-28.03-2.742-60.144-3.9-94.146C450.889,263.123,448.964,206.28,444.389,160.832z"/>
+                </g>
+            </g>
+            </svg>
+        </button>
       </div>
     </div>
 
@@ -98,9 +101,19 @@
       [class.success]="buttonState === 'success'">
       <span *ngIf="buttonState === 'idle'">{{ 'consent.validateButton.idle' | translate }}</span>
       <div *ngIf="buttonState === 'loading'" class="spinner"></div>
-      <svg *ngIf="buttonState === 'success'" class="checkmark-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+      <svg *ngIf="buttonState === 'success' && !showValidationPopup" class="checkmark-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
         <path fill-rule="evenodd" d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.454-12.68a.75.75 0 0 1 1.04-.208Z" clip-rule="evenodd" />
       </svg>
     </button>
   </footer>
+
+  <div *ngIf="showValidationPopup" class="validation-popup">
+    <div class="popup-content">
+      <svg class="popup-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+        <path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clip-rule="evenodd" />
+      </svg>
+      <p>{{ validationPopupMessage }}</p>
+    </div>
+  </div>
+
 </div>

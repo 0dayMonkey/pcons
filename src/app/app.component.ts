@@ -202,7 +202,6 @@ export class AppComponent implements OnInit, OnDestroy {
     this.listeners.push(
       this.renderer.listen('document', 'fullscreenchange', () => {
         if (!this.document.fullscreenElement) {
-          // Logic for when exiting fullscreen if needed
         }
       })
     );

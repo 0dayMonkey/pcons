@@ -19,7 +19,8 @@
     "validationImpossible": "Validierung unmöglich:",
     "mustReadConditions": "- Bitte lesen Sie alle Bedingungen.",
     "mandatoryCheckboxRequired": "- Das Kontrollkästchen für die obligatorische Einwilligung muss aktiviert sein.",
-    "signatureRequired": "- Unterschrift ist erforderlich."
+    "signatureRequired": "- Unterschrift ist erforderlich.",
+    "thankYou": "Danke für Ihr Vertrauen!"
   },
   "generic": {
     "loading": "Laden...",

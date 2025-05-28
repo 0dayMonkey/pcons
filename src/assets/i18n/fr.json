@@ -19,7 +19,8 @@
     "validationImpossible": "Validation impossible:",
     "mustReadConditions": "- Veuillez lire toutes les conditions.",
     "mandatoryCheckboxRequired": "- La case de consentement obligatoire doit être cochée.",
-    "signatureRequired": "- La signature est requise."
+    "signatureRequired": "- La signature est requise.",
+    "thankYou": "Merci de votre confiance !"
   },
   "generic": {
     "loading": "Chargement...",

@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Mr. Traffic: Enhanced Graphics</title>
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <style>
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #3498db; }
+    canvas { width: 100%; height: 100%; display: block; }
+    #uiContainer { position: absolute; top: 0; left: 0; width: 100%; padding: 15px; box-sizing: border-box; display: flex; justify-content: center; align-items: center; pointer-events: none; }
+    #scoreBoard { color: white; font-family: 'Arial', sans-serif; font-size: 28px; text-shadow: 2px 2px 0 #000000, -2px -2px 0 #000000, 2px -2px 0 #000000, -2px 2px 0 #000000; background-color: rgba(0,0,0,0.3); padding: 5px 10px; border-radius: 5px;}
+    #gameOverScreen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7); display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: white; font-family: 'Arial', sans-serif; z-index: 10; }
+    #gameOverScreen h1 { font-size: 50px; text-shadow: 3px 3px 0 #555; margin-bottom: 20px; }
+    #gameOverScreen p { font-size: 28px; margin-bottom: 30px; }
+    #restartButton { padding: 12px 25px; font-size: 20px; color: #333; background-color: #f1c40f; border: 2px solid #e67e22; border-radius: 8px; cursor: pointer; text-shadow: 1px 1px 0 #fff; transition: all 0.2s ease; pointer-events: all; font-weight: bold; }
+    #restartButton:hover { background-color: #f39c12; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+  </style>
+</head>
+<body>
+  <div id="uiContainer">
+    <div id="scoreBoard">Score: <span id="score">0</span></div>
+  </div>
+  <div id="gameOverScreen">
+    <h1>GAME OVER</h1>
+    <p>Score Final: <span id="finalScore">0</span></p>
+    <button id="restartButton">Rejouer</button>
+  </div>
+  <canvas id="renderCanvas"></canvas>
+
+  <script>
+    const canvas = document.getElementById("renderCanvas");
+    const engine = new BABYLON.Engine(canvas, true, { stencil: true });
+
+    let score = 50;
+    let scoreDisplay;
+    let finalScoreDisplay;
+    let gameOverScreen;
+    let restartButton;
+    let gameState = "playing";
+    let gameStartTime = 0;
+    const gracePeriodDuration = 3000;
+
+    let baseCarSpeed = 0.07;
+    const carSpeedIncrement = 0.00002;
+    const maxImpatienceTime = 5000;
+
+    const singleLaneVisualWidth = 2.0;
+    const medianVisualWidth = 0.5;
+    const laneCenterToMedianOffset = singleLaneVisualWidth / 2 + medianVisualWidth / 2;
+
+    const roadArmVisualLength = 15;
+    const intersectionCenterZoneSize = (laneCenterToMedianOffset + singleLaneVisualWidth / 2) * 2;
+
+    const cars = [];
+    const clickedCars = new Set();
+    let sceneInstance;
+
+    const carPathDefinitions = [
+        { pathId: 0, name: "N_to_S", spawnPoint: new BABYLON.Vector3(-laneCenterToMedianOffset, 0.3, roadArmVisualLength + intersectionCenterZoneSize / 2 + 5),
+          movementAxis: 'z', movementDirection: -1, carRotationY: Math.PI,
+          nextPossiblePaths: { straight: 1, left: 2, right: 3 },
+          laneAnchor: { x: -laneCenterToMedianOffset, z: null }
+        },
+        { pathId: 1, name: "S_to_N", spawnPoint: new BABYLON.Vector3(laneCenterToMedianOffset, 0.3, -(roadArmVisualLength + intersectionCenterZoneSize / 2 + 5)),
+          movementAxis: 'z', movementDirection: 1, carRotationY: 0,
+          nextPossiblePaths: { straight: 0, left: 3, right: 2 },
+          laneAnchor: { x: laneCenterToMedianOffset, z: null }
+        },
+        { pathId: 2, name: "E_to_W", spawnPoint: new BABYLON.Vector3(roadArmVisualLength + intersectionCenterZoneSize / 2 + 5, 0.3, laneCenterToMedianOffset),
+          movementAxis: 'x', movementDirection: -1, carRotationY: -Math.PI / 2,
+          nextPossiblePaths: { straight: 3, left: 1, right: 0 },
+          laneAnchor: { x: null, z: laneCenterToMedianOffset }
+        },
+        { pathId: 3, name: "W_to_E", spawnPoint: new BABYLON.Vector3(-(roadArmVisualLength + intersectionCenterZoneSize / 2 + 5), 0.3, -laneCenterToMedianOffset),
+          movementAxis: 'x', movementDirection: 1, carRotationY: Math.PI / 2,
+          nextPossiblePaths: { straight: 2, left: 0, right: 1 },
+          laneAnchor: { x: null, z: -laneCenterToMedianOffset }
+        }
+    ];
+
+    let spawnTimers = {};
+    const minSpawnInterval = 3000;
+    const maxSpawnInterval = 7000;
+
+    function initializeSpawnTimers() {
+        carPathDefinitions.forEach(pathDef => {
+            spawnTimers[pathDef.pathId] = Math.random() * (maxSpawnInterval - minSpawnInterval) + minSpawnInterval;
+        });
+    }
+
+    function manageSpawns(deltaTime) {
+        if (gameState !== "playing" || !sceneInstance) return;
+        carPathDefinitions.forEach(pathDef => {
+            spawnTimers[pathDef.pathId] -= deltaTime;
+            if (spawnTimers[pathDef.pathId] <= 0) {
+                if (cars.filter(c => c.pathDefinition.pathId === pathDef.pathId).length < 3) {
+                    createCar(sceneInstance, pathDef);
+                }
+                spawnTimers[pathDef.pathId] = Math.random() * (maxSpawnInterval - minSpawnInterval) + minSpawnInterval;
+            }
+        });
+    }
+
+    const createScene = () => {
+        sceneInstance = new BABYLON.Scene(engine);
+        sceneInstance.clearColor = new BABYLON.Color4(0.5, 0.8, 1, 1);
+
+        const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 3.5, 45, new BABYLON.Vector3(0, 0, 0), sceneInstance);
+        camera.attachControl(canvas, false);
+        camera.lowerRadiusLimit = 35;
+        camera.upperRadiusLimit = 70;
+        camera.lowerBetaLimit = Math.PI / 4;
+        camera.upperBetaLimit = Math.PI / 2.5;
+
+        const hemiLight = new BABYLON.HemisphericLight("hemiLight", new BABYLON.Vector3(0, 1, 0), sceneInstance);
+        hemiLight.intensity = 0.7;
+        hemiLight.groundColor = new BABYLON.Color3(0.5, 0.5, 0.5);
+
+        const dirLight = new BABYLON.DirectionalLight("dirLight", new BABYLON.Vector3(-1, -2, -1), sceneInstance);
+        dirLight.position = new BABYLON.Vector3(20, 40, 20);
+        dirLight.intensity = 0.5;
+        dirLight.diffuse = new BABYLON.Color3(1, 0.9, 0.8);
+
+        createEnvironment(sceneInstance);
+        const player = createPlayer(sceneInstance);
+        gameStartTime = Date.now();
+        initializeSpawnTimers();
+
+        const clickParticleSystem = createClickParticleSystem(sceneInstance, player);
+
+        sceneInstance.onPointerDown = (evt, pickInfo) => {
+            if (gameState !== "playing") return;
+
+            if (pickInfo.hit && pickInfo.pickedMesh) {
+                const pickedCarRoot = getCarRoot(pickInfo.pickedMesh);
+
+                if (pickedCarRoot && pickedCarRoot.isCar && !clickedCars.has(pickedCarRoot)) {
+                    clickedCars.add(pickedCarRoot);
+                    setTimeout(() => clickedCars.delete(pickedCarRoot), 300);
+
+                    if (pickedCarRoot.actualSpeed === 0) {
+                        pickedCarRoot.actualSpeed = pickedCarRoot.pathDefinition.movementDirection * pickedCarRoot.speedMagnitude;
+                        pickedCarRoot.isStoppedByPlayer = false;
+                        pickedCarRoot.impatienceTimer = 0;
+                        if (pickedCarRoot.impatienceBar) pickedCarRoot.impatienceBar.isVisible = false;
+                    } else {
+                        pickedCarRoot.speedMagnitude = Math.abs(pickedCarRoot.actualSpeed);
+                        pickedCarRoot.actualSpeed = 0;
+                        pickedCarRoot.isStoppedByPlayer = true;
+                        pickedCarRoot.impatienceTimer = 0;
+                        if (pickedCarRoot.impatienceBar) pickedCarRoot.impatienceBar.isVisible = true;
+                    }
+                    score += 10;
+                    updateScoreDisplay();
+
+                    const armL = player.getChildMeshes().find(m => m.name === "playerArmL");
+                    const armR = player.getChildMeshes().find(m => m.name === "playerArmR");
+                    if (armL && armR) {
+                        sceneInstance.beginAnimation(armL, 0, 10, false, 2);
+                        sceneInstance.beginAnimation(armR, 0, 10, false, 2);
+                    }
+
+                    clickParticleSystem.emitter = pickedCarRoot.position.clone().add(new BABYLON.Vector3(0, 0.5, 0));
+                    clickParticleSystem.start();
+                    setTimeout(() => clickParticleSystem.stop(), 150);
+                }
+            }
+        };
+
+        let time = 0;
+        sceneInstance.registerBeforeRender(() => {
+            if (gameState !== "playing") return;
+
+            const deltaTime = engine.getDeltaTime();
+            manageSpawns(deltaTime);
+            time += deltaTime * 0.001;
+            const isGracePeriodActive = Date.now() - gameStartTime < gracePeriodDuration;
+
+            player.position.y = 0.75 + Math.sin(time * 3) * 0.05;
+
+            for (let i = cars.length - 1; i >= 0; i--) {
+                const car = cars[i];
+                if (car.isDisposed()) {
+                    cars.splice(i, 1);
+                    continue;
+                }
+
+                if (car.isStoppedByPlayer && car.actualSpeed === 0) {
+                    car.impatienceTimer += deltaTime;
+                    if (car.impatienceBar) {
+                        car.impatienceBar.isVisible = true;
+                        const impatienceRatio = Math.min(car.impatienceTimer / maxImpatienceTime, 1);
+                        car.impatienceBar.scaling.x = impatienceRatio;
+                        if (impatienceRatio < 0.5) car.impatienceBar.material.emissiveColor = new BABYLON.Color3(0, 1, 0);
+                        else if (impatienceRatio < 0.85) car.impatienceBar.material.emissiveColor = new BABYLON.Color3(1, 1, 0);
+                        else car.impatienceBar.material.emissiveColor = new BABYLON.Color3(1, 0, 0);
+                    }
+                    if (car.impatienceTimer >= maxImpatienceTime) {
+                        car.actualSpeed = car.pathDefinition.movementDirection * car.speedMagnitude;
+                        car.isStoppedByPlayer = false;
+                        car.impatienceTimer = 0;
+                        if (car.impatienceBar) car.impatienceBar.isVisible = false;
+                    }
+                } else if (car.impatienceBar) {
+                    car.impatienceBar.isVisible = false;
+                }
+
+                const distToCenter = BABYLON.Vector2.Distance(new BABYLON.Vector2(car.position.x, car.position.z), BABYLON.Vector2.Zero());
+                const approachThreshold = intersectionCenterZoneSize / 2 + singleLaneVisualWidth;
+                const inIntersectionThreshold = intersectionCenterZoneSize / 2 * 0.5;
+
+                if (!car.isTurning && car.turnDecision !== "straight" && distToCenter < approachThreshold && car.actualSpeed !== 0) {
+                    if (distToCenter < inIntersectionThreshold) {
+                        car.isTurning = true;
+                        car.actualSpeed = 0;
+
+                        let nextPathDefId = car.pathDefinition.nextPossiblePaths[car.turnDecision];
+                        let nextPathDef = carPathDefinitions.find(p => p.pathId === nextPathDefId);
+
+                        if (car.turnDecision === "left") {
+                            if (car.pathDefinition.pathId === 0) nextPathDef = carPathDefinitions.find(pD => pD.name === "W_to_E");
+                            else if (car.pathDefinition.pathId === 1) nextPathDef = carPathDefinitions.find(pD => pD.name === "E_to_W");
+                            else if (car.pathDefinition.pathId === 2) nextPathDef = carPathDefinitions.find(pD => pD.name === "S_to_N");
+                            else if (car.pathDefinition.pathId === 3) nextPathDef = carPathDefinitions.find(pD => pD.name === "N_to_S");
+                        } else if (car.turnDecision === "right") {
+                            if (car.pathDefinition.pathId === 0) nextPathDef = carPathDefinitions.find(pD => pD.name === "E_to_W");
+                            else if (car.pathDefinition.pathId === 1) nextPathDef = carPathDefinitions.find(pD => pD.name === "W_to_E");
+                            else if (car.pathDefinition.pathId === 2) nextPathDef = carPathDefinitions.find(pD => pD.name === "N_to_S");
+                            else if (car.pathDefinition.pathId === 3) nextPathDef = carPathDefinitions.find(pD => pD.name === "S_to_N");
+                        }
+
+                        if (nextPathDef) {
+                            const turnAnimation = new BABYLON.Animation("carTurn", "rotation.y", 60, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+                            turnAnimation.setKeys([
+                                { frame: 0, value: car.rotation.y },
+                                { frame: 30, value: nextPathDef.carRotationY }
+                            ]);
+                            car.animations.push(turnAnimation);
+                            sceneInstance.beginAnimation(car, 0, 30, false, 1, () => {
+                                car.pathDefinition = nextPathDef;
+                                if (nextPathDef.laneAnchor.x !== null) car.position.x = nextPathDef.laneAnchor.x;
+                                if (nextPathDef.laneAnchor.z !== null) car.position.z = nextPathDef.laneAnchor.z;
+                                car.actualSpeed = nextPathDef.movementDirection * car.speedMagnitude;
+                                car.isTurning = false;
+                                car.turnDecision = "straight";
+                            });
+                        } else {
+                            car.actualSpeed = car.pathDefinition.movementDirection * car.speedMagnitude;
+                            car.isTurning = false;
+                        }
+                    }
+                }
+
+                if (car.actualSpeed !== 0 && !car.isTurning) {
+                    const moveDistance = car.actualSpeed * (deltaTime / 16.66);
+                    if (car.pathDefinition.movementAxis === 'z') {
+                        car.position.z += moveDistance;
+                    } else {
+                        car.position.x += moveDistance;
+                    }
+
+                    car.getChildMeshes().filter(m => m.name.startsWith("wheel")).forEach(wheel => {
+                        wheel.rotate(BABYLON.Axis.X, car.pathDefinition.movementDirection * (car.actualSpeed !== 0 ? 1 : 0) * 0.25 * (deltaTime / 16.66), BABYLON.Space.LOCAL);
+                    });
+
+                    const despawnLimit = roadArmVisualLength + intersectionCenterZoneSize / 2 + 7;
+                    let carOutOfArena = false;
+                    if (car.pathDefinition.movementAxis === 'z') {
+                        if (Math.abs(car.position.z) > despawnLimit) carOutOfArena = true;
+                    } else {
+                        if (Math.abs(car.position.x) > despawnLimit) carOutOfArena = true;
+                    }
+
+                    if (carOutOfArena) {
+                        car.dispose();
+                        continue;
+                    }
+                }
+
+                for (let j = i - 1; j >= 0; j--) {
+                    const otherCar = cars[j];
+                    if (otherCar.isDisposed()) continue;
+
+                    const carBody = car.getChildMeshes().find(m => m.name === "carBody");
+                    const otherCarBody = otherCar.getChildMeshes().find(m => m.name === "carBody");
+
+                    if (carBody && otherCarBody && carBody.intersectsMesh(otherCarBody, true)) {
+                        if (!car.isColliding && !otherCar.isColliding) {
+                            car.isColliding = true;
+                            otherCar.isColliding = true;
+                            setTimeout(() => {
+                                if (!car.isDisposed()) car.isColliding = false;
+                                if (!otherCar.isDisposed()) otherCar.isColliding = false;
+                            }, 500);
+
+                            if (!isGracePeriodActive) {
+                                score = Math.max(0, score - 25);
+                                updateScoreDisplay();
+                                if (score <= 0) {
+                                    triggerGameOver();
+                                    break;
+                                }
+                            }
+                            [carBody.material, otherCarBody.material].forEach(mat => {
+                                const originalEmissive = mat.emissiveColor.clone();
+                                mat.emissiveColor = new BABYLON.Color3(1, 0, 0);
+                                setTimeout(() => {
+                                    if (mat && !mat.isDisposed()) mat.emissiveColor = originalEmissive;
+                                }, 200);
+                            });
+                        }
+                    }
+                }
+                if (gameState !== "playing") break;
+            }
+            baseCarSpeed += carSpeedIncrement * (deltaTime / 16.66);
+        });
+        return sceneInstance;
+    };
+
+    function getCarRoot(mesh) {
+        if (!mesh) return null;
+        if (mesh.isCar) return mesh;
+        if (mesh.parent && mesh.parent.isCar) return mesh.parent;
+        if (mesh.parent && mesh.parent.parent && mesh.parent.parent.isCar) return mesh.parent.parent;
+        return null;
+    }
+
+    function createEnvironment(scene) {
+        const roadMat = new BABYLON.StandardMaterial("roadMat", scene);
+        roadMat.diffuseColor = new BABYLON.Color3(0.2, 0.2, 0.25);
+        roadMat.specularColor = new BABYLON.Color3(0.1, 0.1, 0.1);
+
+        const intersectionMat = new BABYLON.StandardMaterial("intersectionMat", scene);
+        intersectionMat.diffuseColor = new BABYLON.Color3(0.25, 0.25, 0.3);
+
+        const sidewalkMat = new BABYLON.StandardMaterial("sidewalkMat", scene);
+        sidewalkMat.diffuseColor = new BABYLON.Color3(0.7, 0.7, 0.7);
+        sidewalkMat.specularColor = new BABYLON.Color3(0.3, 0.3, 0.3);
+
+        const dashLineMat = new BABYLON.StandardMaterial("dashLineMat", scene);
+        dashLineMat.diffuseColor = new BABYLON.Color3(0.9, 0.9, 0.9);
+
+        const medianMat = new BABYLON.StandardMaterial("medianMat", scene);
+        medianMat.diffuseColor = new BABYLON.Color3(0.4, 0.6, 0.4);
+        medianMat.emissiveColor = new BABYLON.Color3(0.1, 0.2, 0.1);
+
+        const grassMat = new BABYLON.StandardMaterial("grassMat", scene);
+        grassMat.diffuseColor = new BABYLON.Color3(0.2, 0.6, 0.2);
+        grassMat.emissiveColor = new BABYLON.Color3(0.1, 0.3, 0.1);
+
+        const ground = BABYLON.MeshBuilder.CreateGround("ground", { width: 100, height: 100 }, scene);
+        ground.material = grassMat;
+        ground.position.y = -0.2;
+
+        const intersectionMesh = BABYLON.MeshBuilder.CreateBox("intersectionMesh", { size: intersectionCenterZoneSize, height: 0.1 }, scene);
+        intersectionMesh.material = intersectionMat;
+        intersectionMesh.position.y = -0.05;
+
+        const axes = [{ isVertical: true }, { isVertical: false }];
+        axes.forEach(axisInfo => {
+            const medianHeight = 0.2;
+            const median = BABYLON.MeshBuilder.CreateBox("median_" + (axisInfo.isVertical ? "V" : "H"), {
+                width: axisInfo.isVertical ? medianVisualWidth : roadArmVisualLength * 2 + intersectionCenterZoneSize,
+                height: medianHeight,
+                depth: axisInfo.isVertical ? roadArmVisualLength * 2 + intersectionCenterZoneSize : medianVisualWidth
+            }, scene);
+            median.material = medianMat;
+            median.position.y = medianHeight / 2 - 0.1;
+
+            for (let side = -1; side <= 1; side += 2) {
+                const roadLane = BABYLON.MeshBuilder.CreateBox("roadLane_" + (axisInfo.isVertical ? "V" : "H") + "_" + side, {
+                    width: axisInfo.isVertical ? singleLaneVisualWidth : roadArmVisualLength * 2 + intersectionCenterZoneSize,
+                    height: 0.1,
+                    depth: axisInfo.isVertical ? roadArmVisualLength * 2 + intersectionCenterZoneSize : singleLaneVisualWidth
+                }, scene);
+                roadLane.material = roadMat;
+                roadLane.position.y = -0.05;
+                if (axisInfo.isVertical) {
+                    roadLane.position.x = side * laneCenterToMedianOffset;
+                } else {
+                    roadLane.position.z = side * laneCenterToMedianOffset;
+                }
+
+                const numDashes = 7;
+                const totalLengthForDashes = roadArmVisualLength * 2;
+                const dashActualLength = totalLengthForDashes / (numDashes * 2);
+                for (let i = 0; i < numDashes; i++) {
+                    for (let armSide = -1; armSide <= 1; armSide += 2) {
+                        if (dashActualLength <= 0) continue;
+                        const dash = BABYLON.MeshBuilder.CreateBox("dash", {
+                            width: axisInfo.isVertical ? 0.10 : dashActualLength,
+                            height: 0.11,
+                            depth: axisInfo.isVertical ? dashActualLength : 0.10
+                        }, scene);
+                        dash.material = dashLineMat;
+                        dash.position.y = -0.045;
+                        const distFromCenterOfIntersectionArm = intersectionCenterZoneSize / 2 + dashActualLength / 2 + i * dashActualLength * 2;
+                        if (axisInfo.isVertical) {
+                            dash.position.x = side * laneCenterToMedianOffset;
+                            dash.position.z = armSide * distFromCenterOfIntersectionArm;
+                        } else {
+                            dash.position.z = side * laneCenterToMedianOffset;
+                            dash.position.x = armSide * distFromCenterOfIntersectionArm;
+                        }
+                    }
+                }
+
+                const sidewalk = BABYLON.MeshBuilder.CreateBox("sidewalk_" + (axisInfo.isVertical ? "V" : "H") + "_" + side, {
+                    width: axisInfo.isVertical ? 1.5 : roadArmVisualLength * 2 + intersectionCenterZoneSize + 3,
+                    height: 0.15,
+                    depth: axisInfo.isVertical ? roadArmVisualLength * 2 + intersectionCenterZoneSize + 3 : 1.5
+                }, scene);
+                sidewalk.material = sidewalkMat;
+                sidewalk.position.y = 0.025;
+                if (axisInfo.isVertical) {
+                    sidewalk.position.x = side * (laneCenterToMedianOffset + singleLaneVisualWidth / 2 + 0.75);
+                } else {
+                    sidewalk.position.z = side * (laneCenterToMedianOffset + singleLaneVisualWidth / 2 + 0.75);
+                }
+            }
+        });
+
+        const treeMat = new BABYLON.StandardMaterial("treeMat", scene);
+        treeMat.diffuseColor = new BABYLON.Color3(0.2, 0.8, 0.2);
+        treeMat.emissiveColor = new BABYLON.Color3(0.1, 0.4, 0.1);
+        const trunkMat = new BABYLON.StandardMaterial("trunkMat", scene);
+        trunkMat.diffuseColor = new BABYLON.Color3(0.5, 0.3, 0.2);
+
+        const positions = [
+            { x: -10, z: -10 }, { x: 10, z: -10 }, { x: -10, z: 10 }, { x: 10, z: 10 }
+        ];
+        positions.forEach(pos => {
+            const trunk = BABYLON.MeshBuilder.CreateCylinder("trunk", { height: 1, diameter: 0.3 }, scene);
+            trunk.material = trunkMat;
+            trunk.position = new BABYLON.Vector3(pos.x, 0.5, pos.z);
+            const foliage = BABYLON.MeshBuilder.CreateSphere("foliage", { diameter: 1.5 }, scene);
+            foliage.material = treeMat;
+            foliage.position = new BABYLON.Vector3(pos.x, 1.5, pos.z);
+        });
+
+        const skybox = BABYLON.MeshBuilder.CreateBox("skybox", { size: 1000 }, scene);
+        const skyboxMat = new BABYLON.StandardMaterial("skyboxMat", scene);
+        skyboxMat.backFaceCulling = false;
+        skyboxMat.diffuseColor = new BABYLON.Color3(0.5, 0.8, 1);
+        skyboxMat.specularColor = new BABYLON.Color3(0, 0, 0);
+        skybox.material = skyboxMat;
+    }
+
+    function createPlayer(scene) {
+        const player = new BABYLON.Mesh("player_root", scene);
+        player.position = new BABYLON.Vector3(0, 0, 0);
+
+        const skinMat = new BABYLON.StandardMaterial("playerSkin", scene);
+        skinMat.diffuseColor = new BABYLON.Color3(0.9, 0.7, 0.5);
+        const uniformMat = new BABYLON.StandardMaterial("playerUniform", scene);
+        uniformMat.diffuseColor = new BABYLON.Color3(0.1, 0.3, 0.7);
+        uniformMat.emissiveColor = new BABYLON.Color3(0.05, 0.15, 0.35);
+        const hatMat = new BABYLON.StandardMaterial("playerHat", scene);
+        hatMat.diffuseColor = new BABYLON.Color3(0.05, 0.15, 0.35);
+        hatMat.specularColor = new BABYLON.Color3(0.5, 0.5, 0.5);
+        const vestMat = new BABYLON.StandardMaterial("vestMat", scene);
+        vestMat.diffuseColor = new BABYLON.Color3(1, 0.5, 0);
+        vestMat.emissiveColor = new BABYLON.Color3(0.2, 0.1, 0);
+
+        const body = BABYLON.MeshBuilder.CreateCapsule("playerBody", { height: 1, radius: 0.3 }, scene);
+        body.material = uniformMat;
+        body.position.y = 0.5;
+        body.parent = player;
+
+        const vest = BABYLON.MeshBuilder.CreateBox("vest", { width: 0.65, height: 0.4, depth: 0.45 }, scene);
+        vest.material = vestMat;
+        vest.position.y = 0.5;
+        vest.parent = player;
+
+        const head = BABYLON.MeshBuilder.CreateSphere("playerHead", { diameter: 0.6, segments: 16 }, scene);
+        head.material = skinMat;
+        head.position.y = 1.2;
+        head.parent = player;
+
+        const kepiBottom = BABYLON.MeshBuilder.CreateCylinder("kepiBot", { height: 0.2, diameter: 0.7, tessellation: 16 }, scene);
+        kepiBottom.material = hatMat;
+        kepiBottom.position.y = 1.5;
+        kepiBottom.parent = player;
+        const kepiTop = BABYLON.MeshBuilder.CreateCylinder("kepiTop", { height: 0.3, diameter: 0.5, tessellation: 16 }, scene);
+        kepiTop.material = hatMat;
+        kepiTop.position.y = 1.75;
+        kepiTop.parent = player;
+
+        const armL = BABYLON.MeshBuilder.CreateCapsule("playerArmL", { height: 0.7, radius: 0.1 }, scene);
+        armL.material = uniformMat;
+        armL.setPivotPoint(new BABYLON.Vector3(0, 0.3, 0));
+        armL.position = new BABYLON.Vector3(-0.4, 0.7, 0);
+        armL.parent = player;
+        const armR = armL.clone("playerArmR");
+        armR.position.x = 0.4;
+        armR.parent = player;
+
+        const armWaveAnim = new BABYLON.Animation("armWave", "rotation.z", 30, BABYLON.Animation.ANIMATIONTYPE_FLOAT, BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT);
+        armWaveAnim.setKeys([
+            { frame: 0, value: 0 },
+            { frame: 5, value: -Math.PI / 3 },
+            { frame: 10, value: 0 }
+        ]);
+        armL.animations.push(armWaveAnim);
+        armR.animations.push(armWaveAnim.clone());
+
+        return player;
+    }
+
+    function createCar(scene, pathDef) {
+        const carRoot = new BABYLON.Mesh("car_root_" + pathDef.name + "_" + Date.now(), scene);
+        carRoot.isCar = true;
+        carRoot.isStoppedByPlayer = false;
+        carRoot.isColliding = false;
+        carRoot.pathDefinition = pathDef;
+        carRoot.impatienceTimer = 0;
+        carRoot.isTurning = false;
+        const turnRandom = Math.random();
+        if (turnRandom < 0.33) carRoot.turnDecision = "left";
+        else if (turnRandom < 0.66) carRoot.turnDecision = "right";
+        else carRoot.turnDecision = "straight";
+
+        const carColors = [
+            new BABYLON.Color3(1, 0.8, 0.2), new BABYLON.Color3(0.9, 0.3, 0.3),
+            new BABYLON.Color3(0.3, 0.6, 0.9), new BABYLON.Color3(0.95, 0.95, 0.95),
+            new BABYLON.Color3(0.4, 0.8, 0.4),
+        ];
+        const bodyMat = new BABYLON.StandardMaterial("carBodyMat_" + cars.length, scene);
+        bodyMat.diffuseColor = carColors[Math.floor(Math.random() * carColors.length)];
+        bodyMat.specularColor = new BABYLON.Color3(0.5, 0.5, 0.5);
+
+        const wheelMat = new BABYLON.StandardMaterial("wheelMat", scene);
+        wheelMat.diffuseColor = new BABYLON.Color3(0.15, 0.15, 0.15);
+        wheelMat.emissiveColor = new BABYLON.Color3(0.05, 0.05, 0.05);
+
+        const windowMat = new BABYLON.StandardMaterial("windowMat", scene);
+        windowMat.diffuseColor = new BABYLON.Color3(0.1, 0.1, 0.2);
+        windowMat.specularColor = new BABYLON.Color3(0.8, 0.8, 0.8);
+
+        const carBody = BABYLON.MeshBuilder.CreateBox("carBody", { width: 1.2, height: 0.5, depth: 2 }, scene);
+        carBody.material = bodyMat;
+        carBody.parent = carRoot;
+
+        const cabin = BABYLON.MeshBuilder.CreateBox("carCabin", { width: 0.9, height: 0.6, depth: 1.2 }, scene);
+        cabin.material = bodyMat;
+        cabin.position.y = 0.55;
+        cabin.position.z = -0.1;
+        cabin.parent = carRoot;
+
+        const window = BABYLON.MeshBuilder.CreateBox("window", { width: 0.85, height: 0.4, depth: 1.15 }, scene);
+        window.material = windowMat;
+        window.position.y = 0.55;
+        window.position.z = -0.1;
+        window.parent = carRoot;
+
+        const wheelDiameter = 0.5;
+        const wheelThickness = 0.2;
+        const wheelPositions = [
+            { x: -0.5, y: -0.15, z: 0.7 }, { x: 0.5, y: -0.15, z: 0.7 },
+            { x: -0.5, y: -0.15, z: -0.7 }, { x: 0.5, y: -0.15, z: -0.7 }
+        ];
+        wheelPositions.forEach((pos, i) => {
+            const wheel = BABYLON.MeshBuilder.CreateCylinder("wheel" + i, { diameter: wheelDiameter, height: wheelThickness, tessellation: 16 }, scene);
+            wheel.material = wheelMat;
+            wheel.rotation.z = Math.PI / 2;
+            wheel.position = new BABYLON.Vector3(pos.x, pos.y, pos.z);
+            wheel.parent = carRoot;
+        });
+
+        const headlightMat = new BABYLON.StandardMaterial("headlightMat", scene);
+        headlightMat.emissiveColor = new BABYLON.Color3(1, 1, 0.8);
+        const headlightL = BABYLON.MeshBuilder.CreateSphere("headlightL", { diameter: 0.2 }, scene);
+        headlightL.material = headlightMat;
+        headlightL.position = new BABYLON.Vector3(-0.4, 0.15, 1);
+        headlightL.parent = carRoot;
+        const headlightR = headlightL.clone("headlightR");
+        headlightR.position.x = 0.4;
+        headlightR.parent = carRoot;
+
+        const impatienceBarMat = new BABYLON.StandardMaterial("impatienceMat", scene);
+        impatienceBarMat.disableLighting = true;
+        impatienceBarMat.emissiveColor = new BABYLON.Color3(0, 1, 0);
+        const impatienceBar = BABYLON.MeshBuilder.CreateBox("impatienceBar", { width: 0.8, height: 0.1, depth: 0.05 }, scene);
+        impatienceBar.material = impatienceBarMat;
+        impatienceBar.parent = carRoot;
+        impatienceBar.position.y = 1.2;
+        impatienceBar.billboardMode = BABYLON.Mesh.BILLBOARDMODE_Y;
+        impatienceBar.isVisible = false;
+        impatienceBar.scaling.x = 0;
+        carRoot.impatienceBar = impatienceBar;
+
+        carRoot.position = pathDef.spawnPoint.clone();
+        carRoot.rotation.y = pathDef.carRotationY;
+        carRoot.speedMagnitude = baseCarSpeed + Math.random() * 0.02;
+        carRoot.actualSpeed = pathDef.movementDirection * carRoot.speedMagnitude;
+        cars.push(carRoot);
+    }
+
+    function createClickParticleSystem(scene, emitterMesh) {
+        const particleSystem = new BABYLON.ParticleSystem("clickParticles", 300, scene);
+        particleSystem.emitter = emitterMesh;
+        particleSystem.minEmitBox = new BABYLON.Vector3(-0.05, -0.05, -0.05);
+        particleSystem.maxEmitBox = new BABYLON.Vector3(0.05, 0.05, 0.05);
+        particleSystem.color1 = new BABYLON.Color4(1, 0.9, 0.3, 1);
+        particleSystem.color2 = new BABYLON.Color4(1, 1, 1, 1);
+        particleSystem.colorDead = new BABYLON.Color4(0, 0, 0, 0.0);
+        particleSystem.minSize = 0.05;
+        particleSystem.maxSize = 0.15;
+        particleSystem.minLifeTime = 0.1;
+        particleSystem.maxLifeTime = 0.3;
+        particleSystem.emitRate = 200;
+        particleSystem.blendMode = BABYLON.ParticleSystem.BLENDMODE_ONEONE;
+        particleSystem.gravity = new BABYLON.Vector3(0, 2, 0);
+        particleSystem.direction1 = new BABYLON.Vector3(-0.5, 0.5, -0.5);
+        particleSystem.direction2 = new BABYLON.Vector3(0.5, 1, 0.5);
+        particleSystem.minAngularSpeed = 0;
+        particleSystem.maxAngularSpeed = Math.PI;
+        particleSystem.minEmitPower = 0.5;
+        particleSystem.maxEmitPower = 1;
+        particleSystem.updateSpeed = 0.008;
+        particleSystem.targetStopDuration = 0.1;
+        return particleSystem;
+    }
+
+    function updateScoreDisplay() { scoreDisplay.textContent = score; }
+    function triggerGameOver() {
+        gameState = "gameover";
+        finalScoreDisplay.textContent = score;
+        gameOverScreen.style.display = "flex";
+        engine.stopRenderLoop();
+    }
+
+    function restartGame() {
+        score = 50;
+        updateScoreDisplay();
+        baseCarSpeed = 0.07;
+        gameStartTime = Date.now();
+        cars.forEach(c => c.dispose());
+        cars.length = 0;
+        clickedCars.clear();
+        initializeSpawnTimers();
+
+        const scene = engine.scenes[0];
+        const player = scene.getMeshByName("player_root");
+        if (player) { player.position = new BABYLON.Vector3(0, 0, 0); }
+
+        gameOverScreen.style.display = "none";
+        gameState = "playing";
+        engine.runRenderLoop(() => { if (engine.scenes[0]) { engine.scenes[0].render(); } });
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+        scoreDisplay = document.getElementById("score");
+        finalScoreDisplay = document.getElementById("finalScore");
+        gameOverScreen = document.getElementById("gameOverScreen");
+        restartButton = document.getElementById("restartButton");
+        restartButton.addEventListener("click", restartGame);
+
+        const scene = createScene();
+        engine.runRenderLoop(() => { if (gameState === "playing" && scene) { scene.render(); } });
+        window.addEventListener("resize", () => { engine.resize(); });
+        updateScoreDisplay();
+    });
+  </script>
+</body>
+</html>

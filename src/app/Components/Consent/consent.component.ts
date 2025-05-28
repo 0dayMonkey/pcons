@@ -20,14 +20,7 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import * as Handlebars from 'handlebars';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-
-interface PlayerData {
-  id: string;
-  firstName: string;
-  lastName: string;
-  birthDate: string;
-  photoUrl: string;
-}
+import { ApiService } from '../../Services/api.service';
 
 @Component({
   selector: 'app-consent',
@@ -71,15 +64,24 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   mandatoryCheckbox: boolean = false;
   optionalCheckbox: boolean = false;
   signatureDataUrl: string | null = null;
-  hasScrolledToBottom: boolean = false;
-  currentTextSizeInPx: number = 16;
-  minTextSize: number = 12;
-  maxTextSize: number = 30;
+  hasReachedBottomOnce: boolean = false;
+
+  // Predefined text sizes
+  readonly predefinedTextSizes = {
+    small: 14,
+    medium: 18,
+    large: 22,
+  };
+  currentTextSizeInPx: number = this.predefinedTextSizes.medium; // Default to medium
+  minTextSize: number = 12; // Absolute min for pinch zoom
+  maxTextSize: number = 30; // Absolute max for pinch zoom
+
   buttonState: 'idle' | 'loading' | 'success' = 'idle';
-  isSignaturePadEnlarged: boolean = false;
+  showValidationPopup: boolean = false;
+  validationPopupMessage: string = 'Merci de votre confiance !';
 
   private baseCheckboxLabelSizePx: number = 12;
-  private defaultConditionsTextSizePx: number = 16;
+  private defaultConditionsTextSizePx: number = this.predefinedTextSizes.medium;
 
   @ViewChild('signaturePadCanvas')
   signaturePadCanvas!: ElementRef<HTMLCanvasElement>;
@@ -91,13 +93,18 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   private resizeObserver!: ResizeObserver;
   private navigationTimer: any;
 
+  private initialPinchDistance: number = 0;
+  private pinchStartFontSize: number = 0;
+  private rulesBodyElement: HTMLDivElement | null = null;
+
   constructor(
     private http: HttpClient,
     private route: ActivatedRoute,
     private router: Router,
     private webSocketService: AppWebSocketService,
     private renderer: Renderer2,
-    private translate: TranslateService
+    private translate: TranslateService,
+    private apiservice: ApiService
   ) {
     this.playerPhotoUrl = `https://placehold.co/100x100/E0E0E0/757575?text=${this.translate.instant(
       'generic.loading'
@@ -120,43 +127,44 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
         'generic.error'
       )}+ID`;
     }
+    this.applyTextSizeChangeSideEffects(); // Apply initial text size
   }
 
   fetchAndSetUserData(playerId: string): void {
-    const apiUrl = `http://localhost:3000/player/${playerId}`;
-    this.http.get<PlayerData>(apiUrl).subscribe({
-      next: (playerData) => {
-        this.firstName = playerData.firstName;
-        this.lastName = playerData.lastName;
-        this.birthDate = playerData.birthDate;
-        this.playerPhotoUrl =
-          playerData.photoUrl ||
-          `https://placehold.co/100x100/E0E0E0/757575?text=${this.translate.instant(
-            'generic.na'
-          )}`;
-        this.cardIdNumber = playerData.id;
-      },
-      error: (err) => {
-        this.firstName = this.translate.instant('generic.na');
-        this.lastName = this.translate.instant('generic.na');
-        this.birthDate = this.translate.instant('generic.na');
-        this.cardIdNumber = playerId;
-        this.playerPhotoUrl = `https://placehold.co/100x100/FF8C00/FFFFFF?text=${this.translate.instant(
-          'generic.apiError'
-        )}`;
-      },
+    this.apiservice.getPlayerData(playerId).subscribe((playerData) => {
+      this.firstName = playerData.firstName;
+      this.lastName = playerData.lastName;
+      this.birthDate = playerData.birthDate;
+      this.cardIdNumber = playerId;
     });
   }
 
   ngAfterViewInit(): void {
     this.initializeSignaturePad();
-    this.checkScroll();
-    if (this.rulesBody) {
-      this.rulesBody.nativeElement.addEventListener(
+    this.rulesBodyElement = this.rulesBody?.nativeElement || null;
+
+    if (this.rulesBodyElement) {
+      this.rulesBodyElement.addEventListener(
         'scroll',
         this.onRulesScroll.bind(this)
       );
+      this.rulesBodyElement.addEventListener(
+        'touchstart',
+        this.onTouchStart.bind(this),
+        { passive: false }
+      );
+      this.rulesBodyElement.addEventListener(
+        'touchmove',
+        this.onTouchMove.bind(this),
+        { passive: false }
+      );
+      this.rulesBodyElement.addEventListener(
+        'touchend',
+        this.onTouchEnd.bind(this)
+      );
     }
+    this.checkScroll();
+
     this.resizeObserver = new ResizeObserver(() => {
       if (
         this.signaturePadWrapper &&
@@ -171,10 +179,22 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.rulesBody) {
-      this.rulesBody.nativeElement.removeEventListener(
+    if (this.rulesBodyElement) {
+      this.rulesBodyElement.removeEventListener(
         'scroll',
         this.onRulesScroll.bind(this)
+      );
+      this.rulesBodyElement.removeEventListener(
+        'touchstart',
+        this.onTouchStart.bind(this)
+      );
+      this.rulesBodyElement.removeEventListener(
+        'touchmove',
+        this.onTouchMove.bind(this)
+      );
+      this.rulesBodyElement.removeEventListener(
+        'touchend',
+        this.onTouchEnd.bind(this)
       );
     }
     if (
@@ -192,6 +212,47 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
+  private onTouchStart(event: TouchEvent): void {
+    if (event.touches.length === 2 && this.rulesBodyElement) {
+      event.preventDefault();
+      this.initialPinchDistance = this.getDistanceBetweenTouches(event.touches);
+      this.pinchStartFontSize = this.currentTextSizeInPx;
+    }
+  }
+
+  private onTouchMove(event: TouchEvent): void {
+    if (
+      event.touches.length === 2 &&
+      this.rulesBodyElement &&
+      this.initialPinchDistance > 0
+    ) {
+      event.preventDefault();
+      const currentDistance = this.getDistanceBetweenTouches(event.touches);
+      const scaleFactor = currentDistance / this.initialPinchDistance;
+      let newSize = this.pinchStartFontSize * scaleFactor;
+      newSize = Math.max(this.minTextSize, Math.min(this.maxTextSize, newSize));
+
+      if (Math.abs(this.currentTextSizeInPx - newSize) >= 0.5) {
+        this.currentTextSizeInPx = Math.round(newSize);
+        this.applyTextSizeChangeSideEffects();
+      }
+    }
+  }
+
+  private onTouchEnd(event: TouchEvent): void {
+    if (event.touches.length < 2) {
+      this.initialPinchDistance = 0;
+    }
+  }
+
+  private getDistanceBetweenTouches(touches: TouchList): number {
+    const touch1 = touches[0];
+    const touch2 = touches[1];
+    const dx = touch2.clientX - touch1.clientX;
+    const dy = touch2.clientY - touch1.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
   initializeSignaturePad(): void {
     if (this.signaturePadCanvas) {
       this.signaturePad = new SignaturePad(
@@ -203,6 +264,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
           maxWidth: 2.5,
         }
       );
+      this.signaturePad.addEventListener('beginStroke', () => {});
       this.signaturePad.addEventListener('endStroke', () => {
         this.signatureDataUrl = this.signaturePad.isEmpty()
           ? null
@@ -235,8 +297,15 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
         ctx.scale(ratio, ratio);
       }
 
-      this.signaturePad.clear();
-      this.signatureDataUrl = null;
+      if (this.signatureDataUrl) {
+        const tempImg = new Image();
+        tempImg.onload = () => {
+          if (ctx) ctx.drawImage(tempImg, 0, 0, parentWidth, parentHeight);
+        };
+        tempImg.src = this.signatureDataUrl;
+      } else {
+        this.signaturePad.clear();
+      }
     }
   }
 
@@ -252,38 +321,26 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private checkScroll(): void {
-    if (this.rulesBody) {
-      const el = this.rulesBody.nativeElement;
+    if (this.rulesBodyElement && !this.hasReachedBottomOnce) {
+      const el = this.rulesBodyElement;
       const threshold = 10;
-      this.hasScrolledToBottom =
-        el.scrollHeight - el.scrollTop <= el.clientHeight + threshold;
+      if (el.scrollHeight - el.scrollTop <= el.clientHeight + threshold) {
+        this.hasReachedBottomOnce = true;
+      }
     }
   }
 
-  decreaseTextSize(): void {
-    if (this.currentTextSizeInPx > this.minTextSize) {
-      this.currentTextSizeInPx--;
-      this.applyTextSizeChangeSideEffects();
-    }
-  }
-
-  increaseTextSize(): void {
-    if (this.currentTextSizeInPx < this.maxTextSize) {
-      this.currentTextSizeInPx++;
-      this.applyTextSizeChangeSideEffects();
-    }
-  }
-
-  onTextSizeSliderChange(): void {
-    this.currentTextSizeInPx = Math.max(
-      this.minTextSize,
-      Math.min(this.maxTextSize, this.currentTextSizeInPx)
-    );
+  setTextSize(sizeKey: 'small' | 'medium' | 'large'): void {
+    this.currentTextSizeInPx = this.predefinedTextSizes[sizeKey];
     this.applyTextSizeChangeSideEffects();
   }
 
   private applyTextSizeChangeSideEffects(): void {
-    this.hasScrolledToBottom = false;
+    // Ensure currentTextSizeInPx is within overall min/max bounds if changed by pinch-zoom
+    this.currentTextSizeInPx = Math.max(
+      this.minTextSize,
+      Math.min(this.maxTextSize, this.currentTextSizeInPx)
+    );
     setTimeout(() => this.checkScroll(), 0);
   }
 
@@ -295,19 +352,11 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     return scaledSize;
   }
 
-  toggleSignaturePadSize(): void {
-    this.isSignaturePadEnlarged = !this.isSignaturePadEnlarged;
-    this.clearSignature();
-    setTimeout(() => {
-      this.resizeSignaturePad();
-    }, 50);
-  }
-
   isSubmitEnabled(): boolean {
     return (
       this.mandatoryCheckbox &&
       !!this.signatureDataUrl &&
-      this.hasScrolledToBottom
+      this.hasReachedBottomOnce
     );
   }
 
@@ -315,7 +364,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!this.isSubmitEnabled() || this.buttonState !== 'idle') {
       if (this.buttonState !== 'idle') return;
       let message = this.translate.instant('alert.validationImpossible');
-      if (!this.hasScrolledToBottom)
+      if (!this.hasReachedBottomOnce)
         message += `\n- ${this.translate.instant('alert.mustReadConditions')}`;
       if (!this.mandatoryCheckbox)
         message += `\n- ${this.translate.instant(
@@ -349,10 +398,23 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
       this.http.post(uploadUrl, formData).subscribe({
         next: (response) => {
           this.buttonState = 'success';
+          this.showValidationPopup = true;
+          if (this.navigationTimer) {
+            clearTimeout(this.navigationTimer);
+          }
           this.navigationTimer = setTimeout(() => {
+            this.showValidationPopup = false;
             this.router.navigate(['/logo'], { skipLocationChange: true });
             this.buttonState = 'idle';
-          }, 3000);
+            // Reset component state for next use
+            this.mandatoryCheckbox = false;
+            this.optionalCheckbox = false;
+            this.clearSignature();
+            this.hasReachedBottomOnce = false;
+            this.currentTextSizeInPx = this.predefinedTextSizes.medium;
+            this.applyTextSizeChangeSideEffects();
+            if (this.rulesBodyElement) this.rulesBodyElement.scrollTop = 0;
+          }, 5000);
         },
         error: (err) => {
           console.error("Erreur lors de l'envoi du PDF au serveur:", err);
@@ -451,17 +513,11 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
           signatureImg.src = data.signatureImageUrl;
         }
         const preElementClone = clonedDoc.querySelector(
-          '.conditions-content pre'
+          '.consent-text pre'
         ) as HTMLElement;
         if (preElementClone) {
-          preElementClone.style.fontSize = this.currentTextSizeInPx + 'px';
+          preElementClone.style.fontSize = '9px'; // Keep PDF text size consistent as per template
         }
-        const checkboxLabelSpans = clonedDoc.querySelectorAll(
-          '.checkbox-group label span'
-        ) as NodeListOf<HTMLElement>;
-        checkboxLabelSpans.forEach((span) => {
-          span.style.fontSize = this.getScaledCheckboxLabelSize() + 'px';
-        });
       },
     });
 

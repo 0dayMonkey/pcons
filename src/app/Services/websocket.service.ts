@@ -6,7 +6,6 @@ export interface WebSocketMessage {
   Action: string;
   PlayerId?: string;
   Status?: boolean;
-  // Ajoutez ici d'autres champs si nécessaire pour la communication WebSocket
 }
 
 @Injectable({
@@ -14,9 +13,7 @@ export interface WebSocketMessage {
 })
 export class AppWebSocketService {
   private socket$: WebSocketSubject<WebSocketMessage> | undefined;
-  private messagesSubject = new Subject<WebSocketMessage>();
-  public messages$: Observable<WebSocketMessage> =
-    this.messagesSubject.asObservable();
+  public messages$ = new Subject<WebSocketMessage>();
 
   private currentWsUrl: string | undefined;
 
@@ -37,12 +34,11 @@ export class AppWebSocketService {
       this.socket$.subscribe({
         next: (msg) => {
           console.log('Message received from WebSocket: ', msg);
-          this.messagesSubject.next(msg);
+          this.messages$.next(msg);
         },
         error: (err) => {
           console.error('WebSocket error: ', err);
           this.socket$ = undefined;
-          // setTimeout(() => this.connect(), 5000);
         },
         complete: () => {
           console.log('WebSocket connection closed');
@@ -61,14 +57,6 @@ export class AppWebSocketService {
       this.socket$.next(msg);
     } else {
       console.error('WebSocket is not connected. Cannot send message.');
-      // this.connect();
-      // setTimeout(() => {
-      //   if (this.socket$ && !this.socket$.closed) {
-      //     this.socket$.next(msg);
-      //   } else {
-      //     console.error('still note connected');
-      //   }
-      // }, 1000);
     }
   }
 
