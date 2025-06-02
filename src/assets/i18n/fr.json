@@ -5,11 +5,14 @@
     "firstNameLabel": "Prénom",
     "birthDateLabel": "Né(e) le:",
     "privacyPolicyTitle": "Protection de la vie privée",
-    "mandatoryConsentLabelBold": "Consentement :",
-    "mandatoryConsentLabelText": " Je déclare avoir pris connaissance et je donne mon consentement aux conditions d'utilisation et à la politique de confidentialité. (obligatoire)",
-    "optionalCommunicationsLabelBold": "Communications:",
-    "optionalCommunicationsLabelText": " J'accepte d'être contacté(e) par SMS et e-mail pour des avantages promotionnels et des informations du casino",
-    "signatureLabel": "Signature Manuscrite",
+
+    "consentLabel": "Consentement", 
+    "consentDeclarationText": " Je déclare avoir pris connaissance et je donne mon consentement aux conditions d'utilisation et à la politique de confidentialité. ", 
+
+    "optionalCommunicationsLabelBold": "Communications:", 
+    "optionalCommunicationsLabelText": " J'accepte d'être contacté(e) par SMS et e-mail pour des avantages promotionnels et des informations du casino", 
+
+    "signatureLabel": "Signature Manuscrite", 
     "clearButton": "Effacer",
     "validateButton": {
       "idle": "Valider"
@@ -27,6 +30,8 @@
     "error": "Erreur",
     "playerID": "ID Joueur",
     "na": "N/A",
-    "apiError": "Erreur API"
+    "apiError": "Erreur API",
+    "requiredMarker": "*", 
+    "requiredText": "Requis" 
   }
 }
