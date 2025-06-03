@@ -7,10 +7,11 @@
     "privacyPolicyTitle": "Protection de la vie privée",
 
     "consentLabel": "Consentement", 
-    "consentDeclarationText": " Je déclare avoir pris connaissance et je donne mon consentement aux conditions d'utilisation et à la politique de confidentialité. ", 
+    "consentDeclarationText": " Vous déclarez avoir pris connaissance de ce qui précède et vous donnez votre consentement, dans la mesure nécessaire, au contenu de ce paragraphe.",
+
 
     "optionalCommunicationsLabelBold": "Communications:", 
-    "optionalCommunicationsLabelText": " J'accepte d'être contacté(e) par SMS et e-mail pour des avantages promotionnels et des informations du casino", 
+    "optionalCommunicationsLabelText": "       Vous souhaitez être tenus informés des activités commerciales et sociales de l’Exploitant par voie de communications électroniques (SMS, e-mail, réseaux sociaux...). Vous aurez la possibilité de vous désinscrire à tout moment", 
 
     "signatureLabel": "Signature Manuscrite", 
     "clearButton": "Effacer",

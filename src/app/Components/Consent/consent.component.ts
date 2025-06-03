@@ -17,8 +17,6 @@ import {
   WebSocketMessage,
 } from '../../Services/websocket.service';
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-import * as Handlebars from 'handlebars';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { ApiService } from '../../Services/api.service';
 
@@ -42,39 +40,60 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     1. Qui est responsable du traitement des données à caractère personnel ?
     Le responsable du traitement des données à caractère personnel est GOLDEN PALACE CASINO BSM sas dont le siège social est établi à Place de la République 62200 Boulogne-sur-Mer (849 457 163 RCS Boulogne-sur-Mer) ci-après « l'Exploitant ». L'Exploitant fait partie du Groupe Golden Palace dont les membres sont actifs dans le secteur des jeux de hasard et paris sportifs, y compris en ligne.
     2. Quelles données à caractère personnel?
-    L'Exploitant collecte et traite les données à caractère personnel suivantes : Nom, Prénom, Genre, Date et lieu de naissance, Nationalité, Profession, Numéro de gsm, Photos, Images enregistrées par des caméras, Email, Numéro national, Adresse.
+    L'Exploitant collecte et traite les données à caractère personnel suivantes :
+    * Nom
+    * Prénom
+    * Genre
+    * Date et lieu de naissance
+    * Nationalité
+    * Profession
+    * Numéro de gsm
+    * Photos
+    * Images enregistrées par des caméras
+    * Email
+    * Numéro national
+    * Adresse.
     3. Pourquoi nous collectons vos données à caractère personnel?
-    Ces données sont traitées aux fins suivantes : Pour nous conformer à nos obligations légales; Dans le cadre de l'exécution de nos liens contractuels et différents objectifs organisationnels et d'affaires (tels que, la gestion des comptes, de services informatiques...); Gestion des risques et contrôles de qualité; Pour vous tenir informés des activités commerciales et sociales de l'Exploitant ou des autres membres du Golden Palace Groupe, par voie de communications électroniques (sms, e-mail, réseaux sociaux....).
+    Ces données sont traitées aux fins suivantes :
+    * Pour nous conformer à nos obligations légales;
+    * Dans le cadre de l'exécution de nos liens contractuels et différents objectifs organisationnels et d'affaires (tels que, la gestion des comptes, de services informatiques...);
+    * Gestion des risques et contrôles de qualité;
+    * Pour vous tenir informés des activités commerciales et sociales de l'Exploitant ou des autres membres du Golden Palace Groupe, par voie de communications électroniques (sms, e-mail, réseaux sociaux....).
     4. Qui aura accès à vos données à caractère personnel?
-    Plusieurs entités peuvent avoir accès à vos données à caractère personnel: Les membres du Golden Palace Groupe; La Commission des jeux de hasard; Des fournisseurs belges, français et des fournisseurs situés dans l'Union européenne et auxquels nous faisons appel.
+    Plusieurs entités peuvent avoir accès à vos données à caractère personnel:
+    * Les membres du Golden Palace Groupe;
+    * La Commission des jeux de hasard;
+    * Des fournisseurs belges, français et des fournisseurs situés dans l'Union européenne et auxquels nous faisons appel.
     5. Mesures de sécurité
     Le responsable de traitement a pris des mesures techniques et organisationnelles afin de garantir la sécurité de traitement de vos données. En cas de fuite de données personnelles, vous serez informé dans un délai de 72h suivant la découverte de la fuite.
     6. Durée de conservation
     Vos données personnelles sont conservées pour une durée de 10 ans.
     7. Droits d'accès et de rectification
-    Vous avez le droit : De demander l'accès à vos données à caractère personnel; De demander la rectification de vos données à caractère personnel; De demander l'effacement de vos données à caractère personnel; De demander une limitation du traitement; De vous opposer au traitement; A la portabilité de vos données. Vous disposez également du droit d'introduire une réclamation auprès de l'autorité de contrôle. Pour toute question relative à la protection des données à caractère personnel, vous pouvez vous adresser par courrier postal à l'adresse postale de l'Exploitant, Place de la République 62200 Boulogne-sur-Mer ou par courrier électronique à serge.sacre@citexar.be avec une copie de votre carte d'identité.
+    Vous avez le droit :
+    * De demander l'accès à vos données à caractère personnel
+    * De demander la rectification de vos données à caractère personnel
+    * De demander l'effacement de vos données à caractère personnel
+    * De demander une limitation du traitement
+    * De vous opposer au traitement
+    * A la portabilité de vos données.
+    Vous disposez également du droit d'introduire une réclamation auprès de l'autorité de contrôle. Pour toute question relative à la protection des données à caractère personnel, vous pouvez vous adresser par courrier postal à l'adresse postale de l'Exploitant, Place de la République 62200 Boulogne-sur-Mer ou par courrier électronique à serge.sacre@citexar.be avec une copie de votre carte d'identité.
     8. Copie et consultation
     Vous déclarez avoir reçu une copie électronique ou un support papier de ce document « Règles générales » et « Protection de la vie privée ». Notre politique de vie privée est consultable à tout moment sur le lien suivant: https://www.goldenpalace.fr
-    (Texte additionnel pour assurer le défilement)
-    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec odio. Praesent libero. Sed cursus ante dapibus diam. Sed nisi. Nulla quis sem at nibh elementum imperdiet. Duis sagittis ipsum. Praesent mauris. Fusce nec tellus sed augue semper porta. Mauris massa. Vestibulum lacinia arcu eget nulla. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Curabitur sodales ligula in libero.
-    Sed dignissim lacinia nunc. Curabitur tortor. Pellentesque nibh. Aenean quam. In scelerisque sem at dolor. Maecenas mattis. Sed convallis tristique sem. Proin ut ligula vel nunc egestas porttitor. Morbi lectus risus, iaculis vel, suscipit quis, luctus non, massa. Fusce ac turpis quis ligula lacinia aliquet. Mauris ipsum. Nulla metus metus, ullamcorper vel, tincidunt sed, euismod in, nibh. Quisque volutpat condimentum velit. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.
-    Fin des conditions.
-      `;
+  `;
 
   mandatoryCheckbox: boolean = false;
   optionalCheckbox: boolean = false;
   signatureDataUrl: string | null = null;
   hasReachedBottomOnce: boolean = false;
 
-  // Predefined text sizes
   readonly predefinedTextSizes = {
     small: 14,
     medium: 18,
     large: 22,
   };
-  currentTextSizeInPx: number = this.predefinedTextSizes.medium; // Default to medium
-  minTextSize: number = 12; // Absolute min for pinch zoom
-  maxTextSize: number = 30; // Absolute max for pinch zoom
+  currentTextSizeInPx: number = this.predefinedTextSizes.medium;
+  minTextSize: number = 12;
+  maxTextSize: number = 30;
 
   buttonState: 'idle' | 'loading' | 'success' = 'idle';
   showValidationPopup: boolean = false;
@@ -113,29 +132,30 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnInit(): void {
     this.currentPlayerId = this.route.snapshot.paramMap.get('playerId');
+    this.consentId = '29547';
+
+    this.firstName = 'Joseph';
+    this.lastName = 'Viens';
+    this.birthDate = '23/07/1985';
+    this.cardIdNumber = 'ID Card, THGNF2LN1, 04/02/2034';
+
     if (this.currentPlayerId) {
-      this.fetchAndSetUserData(this.currentPlayerId);
-      this.consentId = `CONSENT_${
-        this.currentPlayerId
-      }_${new Date().getTime()}`;
+      // this.fetchAndSetUserData(this.currentPlayerId);
     } else {
-      this.firstName = this.translate.instant('generic.error');
-      this.lastName = this.translate.instant('generic.playerID');
-      this.birthDate = this.translate.instant('generic.na');
-      this.cardIdNumber = this.translate.instant('generic.na');
       this.playerPhotoUrl = `https://placehold.co/100x100/FF0000/FFFFFF?text=${this.translate.instant(
         'generic.error'
       )}+ID`;
     }
-    this.applyTextSizeChangeSideEffects(); // Apply initial text size
+    this.applyTextSizeChangeSideEffects();
   }
 
   fetchAndSetUserData(playerId: string): void {
     this.apiservice.getPlayerData(playerId).subscribe((playerData) => {
-      this.firstName = playerData.firstName;
-      this.lastName = playerData.lastName;
-      this.birthDate = playerData.birthDate;
-      this.cardIdNumber = playerId;
+      // Values are hardcoded in ngOnInit for testing purposes
+      // this.firstName = playerData.firstName;
+      // this.lastName = playerData.lastName;
+      // this.birthDate = playerData.birthDate;
+      // this.cardIdNumber = playerId;
     });
   }
 
@@ -336,7 +356,6 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private applyTextSizeChangeSideEffects(): void {
-    // Ensure currentTextSizeInPx is within overall min/max bounds if changed by pinch-zoom
     this.currentTextSizeInPx = Math.max(
       this.minTextSize,
       Math.min(this.maxTextSize, this.currentTextSizeInPx)
@@ -406,7 +425,6 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
             this.showValidationPopup = false;
             this.router.navigate(['/logo'], { skipLocationChange: true });
             this.buttonState = 'idle';
-            // Reset component state for next use
             this.mandatoryCheckbox = false;
             this.optionalCheckbox = false;
             this.clearSignature();
@@ -432,17 +450,406 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private async generateConsentPdfAsBlob(): Promise<Blob> {
-    const templateString = await this.http
-      .get('assets/template/template.html', { responseType: 'text' })
-      .toPromise();
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+    });
 
-    if (!templateString) {
-      throw new Error("Le template HTML n'a pas pu être chargé.");
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 15;
+    let currentY = margin;
+    const contentWidth = pageWidth - 2 * margin;
+
+    const addPageIfNeeded = (requiredHeight: number) => {
+      if (currentY + requiredHeight > pageHeight - margin - 10) {
+        doc.addPage();
+        currentY = margin;
+      }
+    };
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(20);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Protection de la vie privée', margin, currentY);
+    currentY += 12;
+
+    const photoWidth = 30;
+    const photoHeight = 30;
+    const textBlockStartY = currentY;
+    let playerDetailsY = textBlockStartY;
+
+    const gapBetweenTextAndPhoto = 5;
+    const playerInfoTextWidth =
+      contentWidth - photoWidth - gapBetweenTextAndPhoto;
+    const lineHeightForPlayerInfo = 7;
+
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+
+    const labelCol1X = margin;
+    const valueCol1X = margin + 35;
+    const labelCol2X = margin + playerInfoTextWidth / 2 + 2;
+    const valueCol2X = labelCol2X + 20;
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Nom :', labelCol1X, playerDetailsY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(this.lastName, valueCol1X, playerDetailsY, {
+      maxWidth: playerInfoTextWidth / 2 - 37,
+    });
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Prénom :', labelCol2X, playerDetailsY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(this.firstName, valueCol2X, playerDetailsY, {
+      maxWidth: playerInfoTextWidth / 2 - 22,
+    });
+    playerDetailsY += lineHeightForPlayerInfo;
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Date de naissance :', labelCol1X, playerDetailsY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(this.birthDate, valueCol1X, playerDetailsY, {
+      maxWidth: playerInfoTextWidth / 2 - 37,
+    });
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('ID Joueur :', labelCol2X, playerDetailsY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(this.cardIdNumber, valueCol2X, playerDetailsY, {
+      maxWidth: playerInfoTextWidth / 2 - 22,
+    });
+
+    const textBlockActualHeight =
+      playerDetailsY - textBlockStartY + lineHeightForPlayerInfo / 2;
+    const photoAdjustmentUpwards = 15;
+    const photoFinalY = textBlockStartY - photoAdjustmentUpwards;
+    const photoX = margin + playerInfoTextWidth + gapBetweenTextAndPhoto;
+
+    if (this.playerPhotoUrl && !this.playerPhotoUrl.includes('placehold.co')) {
+      const img = new Image();
+      img.src = this.playerPhotoUrl;
+      try {
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => {
+            doc.addImage(
+              img,
+              'PNG',
+              photoX,
+              photoFinalY,
+              photoWidth,
+              photoHeight
+            );
+            resolve();
+          };
+          img.onerror = () => {
+            doc.setFillColor(220, 220, 220);
+            doc.rect(photoX, photoFinalY, photoWidth, photoHeight, 'F');
+            doc.setFontSize(8);
+            doc.setTextColor(150, 150, 150);
+            doc.text(
+              'Photo',
+              photoX + photoWidth / 2,
+              photoFinalY + photoHeight / 2,
+              { align: 'center', baseline: 'middle' }
+            );
+            resolve();
+          };
+        });
+      } catch (e) {
+        doc.setFillColor(220, 220, 220);
+        doc.rect(photoX, photoFinalY, photoWidth, photoHeight, 'F');
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text(
+          'Photo',
+          photoX + photoWidth / 2,
+          photoFinalY + photoHeight / 2,
+          { align: 'center', baseline: 'middle' }
+        );
+      }
+    } else {
+      doc.setFillColor(220, 220, 220);
+      doc.rect(photoX, photoFinalY, photoWidth, photoHeight, 'F');
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(
+        'Photo',
+        photoX + photoWidth / 2,
+        photoFinalY + photoHeight / 2,
+        { align: 'center', baseline: 'middle' }
+      );
     }
 
-    const template = Handlebars.compile(templateString);
+    currentY =
+      Math.max(
+        textBlockStartY + textBlockActualHeight,
+        photoFinalY + photoHeight
+      ) + 5;
+
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.3);
+    doc.line(margin, currentY, pageWidth - margin, currentY);
+    currentY += 10;
+
+    doc.setFontSize(9);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'normal');
+
+    const splitRulesText = doc.splitTextToSize(this.rulesText, contentWidth);
+    const rulesLineHeight = 4;
+    for (const line of splitRulesText) {
+      addPageIfNeeded(rulesLineHeight);
+      doc.text(line, margin, currentY);
+      currentY += rulesLineHeight;
+    }
+    currentY += 10;
+
+    addPageIfNeeded(30);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Accords Donnés', margin, currentY);
+    currentY += 8;
+
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.1);
+    doc.line(margin, currentY, pageWidth - margin, currentY);
+    currentY += 7;
+
+    const checkboxSize = 4;
+    const checkboxTextOffsetX = checkboxSize + 2;
+    const checkboxLineHeight = 4.5;
+    let checkboxSectionY = currentY;
+
+    doc.setFontSize(10);
+    let tempY =
+      checkboxSectionY + checkboxSize / 2 - checkboxLineHeight / 2 + 1.5;
+
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.3);
+    doc.rect(margin, checkboxSectionY, checkboxSize, checkboxSize, 'S');
+    if (this.mandatoryCheckbox) {
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.5);
+      doc.line(
+        margin + checkboxSize * 0.2,
+        checkboxSectionY + checkboxSize * 0.5,
+        margin + checkboxSize * 0.4,
+        checkboxSectionY + checkboxSize * 0.7
+      );
+      doc.line(
+        margin + checkboxSize * 0.4,
+        checkboxSectionY + checkboxSize * 0.7,
+        margin + checkboxSize * 0.8,
+        checkboxSectionY + checkboxSize * 0.3
+      );
+    }
+
+    let manLabelX = margin + checkboxTextOffsetX;
+    const initialManLabelX = manLabelX;
+
+    doc.setTextColor(255, 0, 0);
+    doc.setFont('helvetica', 'bold');
+    const asteriskChar = '*';
+    doc.text(asteriskChar, manLabelX, tempY);
+    manLabelX +=
+      (doc.getStringUnitWidth(asteriskChar) * doc.getFontSize()) /
+      doc.internal.scaleFactor;
+
+    doc.setTextColor(0, 0, 0);
+    const consentBoldText = ' Consentement : ';
+    doc.text(consentBoldText, manLabelX, tempY);
+    manLabelX +=
+      (doc.getStringUnitWidth(consentBoldText) * doc.getFontSize()) /
+      doc.internal.scaleFactor;
+
+    doc.setFont('helvetica', 'normal');
+    const mainDeclarationText =
+      'Vous déclarez avoir pris connaissance de ce qui précède et vous donnez votre consentement, dans la mesure nécessaire, au contenu de ce paragraphe.';
+    const requiredText = '   Requis';
+
+    const originalManFontSize = doc.getFontSize();
+    let currentManFont = doc.getFont().fontName;
+    let currentManStyle = doc.getFont().fontStyle;
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(originalManFontSize);
+    const requiredTextWidth =
+      (doc.getStringUnitWidth(requiredText) * originalManFontSize) /
+        doc.internal.scaleFactor +
+      1;
+    doc.setFont(currentManFont, currentManStyle);
+    doc.setFontSize(originalManFontSize);
+
+    const availableWidthForMainText =
+      contentWidth -
+      checkboxTextOffsetX -
+      (manLabelX - initialManLabelX) -
+      requiredTextWidth;
+    const mainTextLines = doc.splitTextToSize(
+      mainDeclarationText,
+      availableWidthForMainText < 0
+        ? contentWidth - checkboxTextOffsetX
+        : availableWidthForMainText
+    );
+
+    let manTextCurrentX = manLabelX;
+    for (let i = 0; i < mainTextLines.length; i++) {
+      if (i > 0) {
+        tempY += checkboxLineHeight;
+        manTextCurrentX = margin + checkboxTextOffsetX;
+        addPageIfNeeded(checkboxLineHeight);
+      }
+      doc.setTextColor(0, 0, 0);
+      doc.setFont('helvetica', 'normal');
+      doc.text(mainTextLines[i], manTextCurrentX, tempY);
+      if (i === mainTextLines.length - 1) {
+        manTextCurrentX +=
+          (doc.getStringUnitWidth(mainTextLines[i]) * doc.getFontSize()) /
+          doc.internal.scaleFactor;
+      }
+    }
+    doc.setTextColor(255, 0, 0);
+    doc.setFont('helvetica', 'italic');
+    doc.text(requiredText, manTextCurrentX, tempY);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+
+    checkboxSectionY = tempY + checkboxLineHeight;
+
+    tempY = checkboxSectionY + checkboxSize / 2 - checkboxLineHeight / 2 + 1.5;
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.3);
+    doc.rect(margin, checkboxSectionY, checkboxSize, checkboxSize, 'S');
+    if (this.optionalCheckbox) {
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.5);
+      doc.line(
+        margin + checkboxSize * 0.2,
+        checkboxSectionY + checkboxSize * 0.5,
+        margin + checkboxSize * 0.4,
+        checkboxSectionY + checkboxSize * 0.7
+      );
+      doc.line(
+        margin + checkboxSize * 0.4,
+        checkboxSectionY + checkboxSize * 0.7,
+        margin + checkboxSize * 0.8,
+        checkboxSectionY + checkboxSize * 0.3
+      );
+    }
+
+    let optLabelX = margin + checkboxTextOffsetX;
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'bold');
+    const communicationsBoldText = 'Communications : ';
+    doc.text(communicationsBoldText, optLabelX, tempY);
+    optLabelX +=
+      (doc.getStringUnitWidth(communicationsBoldText) * doc.getFontSize()) /
+      doc.internal.scaleFactor;
+
+    doc.setFont('helvetica', 'normal');
+    const communicationsNormalText =
+      'Vous déclarez avoir pris connaissance de ce qui précède et vous donnez votre consentement, dans la mesure nécessaire, au contenu de ce paragraphe.';
+    const commTextLines = doc.splitTextToSize(
+      communicationsNormalText,
+      contentWidth -
+        checkboxTextOffsetX -
+        (optLabelX - (margin + checkboxTextOffsetX))
+    );
+    let optTextCurrentX = optLabelX;
+    for (let i = 0; i < commTextLines.length; i++) {
+      if (i > 0) {
+        tempY += checkboxLineHeight;
+        optTextCurrentX = margin + checkboxTextOffsetX;
+        addPageIfNeeded(checkboxLineHeight);
+      }
+      doc.text(commTextLines[i], optTextCurrentX, tempY);
+    }
+    checkboxSectionY = tempY + checkboxLineHeight;
+    currentY = checkboxSectionY + 7;
+
+    addPageIfNeeded(40);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Signature & information', margin, currentY);
+    currentY += 8;
+
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.1);
+    doc.line(margin, currentY, pageWidth - margin, currentY);
+    currentY += 7;
+
+    const sigInfoStartY = currentY;
+    const signatureMaxHeight = 30;
+    const infoGap = 5;
+    const fixedInfoTextX = 95;
+    const signatureMaxWidth = fixedInfoTextX - margin - infoGap;
+    const infoTextX = fixedInfoTextX;
+    const infoTextWidth = pageWidth - margin - infoTextX;
+    const textInfoLineHeight = 5;
+
+    let signatureActualHeight = 0;
+    let signatureImgDataForPdf: HTMLImageElement | null = null;
+    let signatureImgRenderWidth = 0;
+
+    let signatureImgForPdfDataUrl = this.signatureDataUrl;
+
+    if (this.signaturePad && !this.signaturePad.isEmpty()) {
+      const points = this.signaturePad.toData();
+
+      const tempCanvas = document.createElement('canvas');
+      const originalCanvas = this.signaturePadCanvas.nativeElement;
+      tempCanvas.width = originalCanvas.width;
+      tempCanvas.height = originalCanvas.height;
+
+      const tempSignaturePad = new SignaturePad(tempCanvas, {
+        backgroundColor: 'rgba(0,0,0,0)',
+        penColor: this.signaturePad.penColor,
+        minWidth: this.signaturePad.minWidth,
+        maxWidth: this.signaturePad.maxWidth,
+      });
+      tempSignaturePad.fromData(points);
+
+      if (!tempSignaturePad.isEmpty()) {
+        signatureImgForPdfDataUrl = tempSignaturePad.toDataURL('image/png');
+      }
+      tempSignaturePad.off();
+    }
+
+    if (signatureImgForPdfDataUrl) {
+      const img = new Image();
+      img.src = signatureImgForPdfDataUrl;
+      try {
+        await new Promise<void>((resolve) => {
+          img.onload = () => {
+            const aspectRatio = img.width / img.height;
+            signatureImgRenderWidth = signatureMaxWidth;
+            let h = signatureImgRenderWidth / aspectRatio;
+            if (h > signatureMaxHeight) {
+              h = signatureMaxHeight;
+              signatureImgRenderWidth = h * aspectRatio;
+            }
+            signatureActualHeight = h;
+            signatureImgDataForPdf = img;
+            resolve();
+          };
+          img.onerror = () => {
+            signatureActualHeight = signatureMaxHeight;
+            resolve();
+          };
+        });
+      } catch (e) {
+        signatureActualHeight = signatureMaxHeight;
+      }
+    } else {
+      signatureActualHeight = signatureMaxHeight;
+    }
+
     const now = new Date();
-    const consentDate = now.toLocaleString('fr-FR', {
+    const consentDateFormatted = now.toLocaleString('fr-FR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -450,111 +857,100 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
       minute: '2-digit',
       second: '2-digit',
     });
-    const generationDate = consentDate;
-
-    const data = {
-      lastName: this.lastName,
-      firstName: this.firstName,
-      birthDate: this.birthDate,
-      playerId: this.currentPlayerId || this.translate.instant('generic.na'),
-      playerPhotoUrl: this.playerPhotoUrl,
-      consentText: this.rulesText,
-      mandatoryCheckboxChecked: this.mandatoryCheckbox,
-      optionalCheckboxChecked: this.optionalCheckbox,
-      signatureImageUrl: this.signatureDataUrl,
-      consentDate: consentDate,
-      generationDate: generationDate,
-      consentFormId: this.consentId,
-    };
-
-    const processedHtml = template(data);
-    const printableElement = document.createElement('div');
-    printableElement.style.position = 'absolute';
-    printableElement.style.left = '-9999px';
-    printableElement.style.top = '0px';
-    printableElement.innerHTML = processedHtml;
-    document.body.appendChild(printableElement);
-
-    await new Promise((resolve) => setTimeout(resolve, 300));
-
-    const containerToPrint = printableElement.querySelector(
-      '.container'
-    ) as HTMLElement;
-    if (!containerToPrint) {
-      document.body.removeChild(printableElement);
-      throw new Error(
-        "Élément '.container' non trouvé dans le template rendu."
-      );
-    }
-
-    const canvas = await html2canvas(containerToPrint, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      width: containerToPrint.offsetWidth,
-      height: containerToPrint.offsetHeight,
-      windowWidth: containerToPrint.scrollWidth,
-      windowHeight: containerToPrint.scrollHeight,
-      onclone: (clonedDoc) => {
-        const playerPhotoImg = clonedDoc.querySelector(
-          '.player-photo'
-        ) as HTMLImageElement;
-        if (
-          playerPhotoImg &&
-          data.playerPhotoUrl &&
-          data.playerPhotoUrl.startsWith('data:image')
-        ) {
-          playerPhotoImg.src = data.playerPhotoUrl;
-        }
-        const signatureImg = clonedDoc.querySelector(
-          '.signature-image'
-        ) as HTMLImageElement;
-        if (signatureImg && data.signatureImageUrl) {
-          signatureImg.src = data.signatureImageUrl;
-        }
-        const preElementClone = clonedDoc.querySelector(
-          '.consent-text pre'
-        ) as HTMLElement;
-        if (preElementClone) {
-          preElementClone.style.fontSize = '9px'; // Keep PDF text size consistent as per template
-        }
-      },
+    const validUntilDate = new Date(now);
+    validUntilDate.setFullYear(now.getFullYear() + 5);
+    const validUntilDateFormatted = validUntilDate.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
     });
 
-    document.body.removeChild(printableElement);
+    const infoItemsForPdf = [
+      { label: 'Date du consentement :', value: consentDateFormatted },
+      { label: "Valide jusqu'au :", value: validUntilDateFormatted },
+      { label: 'ID du consentement :', value: this.consentId },
+    ];
 
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'pt',
-      format: 'a4',
-    });
+    const textInfoBlockActualHeight =
+      infoItemsForPdf.length * textInfoLineHeight;
 
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = pdf.internal.pageSize.getHeight();
-    const canvasWidth = canvas.width;
-    const canvasHeight = canvas.height;
-    const ratio = canvasWidth / pdfWidth;
-    const projectedCanvasHeight = canvasHeight / ratio;
-    let position = 0;
-    let heightLeft = projectedCanvasHeight;
+    const overallSectionHeight = Math.max(
+      signatureActualHeight,
+      textInfoBlockActualHeight
+    );
 
-    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, projectedCanvasHeight);
-    heightLeft -= pdfHeight;
+    const centeredSignatureY =
+      sigInfoStartY + (overallSectionHeight - signatureActualHeight) / 2;
+    const centeredTextInfoY_start =
+      sigInfoStartY + (overallSectionHeight - textInfoBlockActualHeight) / 2;
 
-    while (heightLeft > 0) {
-      position -= pdfHeight;
-      pdf.addPage();
-      pdf.addImage(
-        imgData,
+    if (signatureImgDataForPdf) {
+      doc.addImage(
+        signatureImgDataForPdf,
         'PNG',
-        0,
-        position,
-        pdfWidth,
-        projectedCanvasHeight
+        margin,
+        centeredSignatureY,
+        signatureImgRenderWidth,
+        signatureActualHeight
       );
-      heightLeft -= pdfHeight;
+    } else {
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.3);
+      doc.rect(
+        margin,
+        centeredSignatureY,
+        signatureMaxWidth,
+        signatureActualHeight,
+        'S'
+      );
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(
+        'Signature non fournie',
+        margin + signatureMaxWidth / 2,
+        centeredSignatureY + signatureActualHeight / 2,
+        { align: 'center', baseline: 'middle' }
+      );
     }
-    return pdf.output('blob');
+
+    let currentTextInfoY = centeredTextInfoY_start;
+    doc.setFontSize(9);
+
+    infoItemsForPdf.forEach((item) => {
+      let currentDrawX = infoTextX;
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 100, 100);
+      doc.text(item.label, currentDrawX, currentTextInfoY);
+
+      const labelWidth =
+        (doc.getStringUnitWidth(item.label) * doc.getFontSize()) /
+        doc.internal.scaleFactor;
+      currentDrawX += labelWidth + 1;
+
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+
+      doc.text(item.value, currentDrawX, currentTextInfoY, {
+        maxWidth: infoTextWidth - (currentDrawX - infoTextX),
+      });
+
+      currentTextInfoY += textInfoLineHeight;
+    });
+
+    currentY = sigInfoStartY + overallSectionHeight + 10;
+
+    const totalPages = doc.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
+      doc.text(
+        `Page ${i} sur ${totalPages}`,
+        pageWidth - margin,
+        pageHeight - margin + 7,
+        { align: 'right' }
+      );
+    }
+    return doc.output('blob');
   }
 }
