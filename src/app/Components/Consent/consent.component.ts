@@ -6,10 +6,11 @@ import {
   OnDestroy,
   OnInit,
   Renderer2,
+  ChangeDetectorRef,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient, HttpClientModule } from '@angular/common/http';
+import { HttpClientModule } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import SignaturePad from 'signature_pad';
 import {
@@ -18,7 +19,17 @@ import {
 } from '../../Services/websocket.service';
 import jsPDF from 'jspdf';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
-import { ApiService } from '../../Services/api.service';
+import {
+  ApiService,
+  ConsentDefinitionResponse,
+  FilterMatchMode,
+  LocationRef,
+  PlayerConsentPOST,
+  SearchModel,
+} from '../../Services/api.service';
+import { ConfigService } from '../../Services/config.service';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 @Component({
   selector: 'app-consent',
@@ -28,58 +39,18 @@ import { ApiService } from '../../Services/api.service';
   styleUrls: ['./consent.component.scss'],
 })
 export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
-  consentId: string = 'CONSENT_FORM_ID';
+  consentIdToDisplayAndSubmit: string = '';
   firstName: string = '';
   lastName: string = '';
   birthDate: string = '';
   cardIdNumber: string = '';
   playerPhotoUrl: string = 'https://placehold.co/100x100/E0E0E0/757575?text=';
   private currentPlayerId: string | null = null;
+  private currentConsentDefinition: ConsentDefinitionResponse | null = null;
+  private consentDefinitionIdToSubmit: number = 0;
+  private definitionUserIdApi: string | null = null;
 
-  rulesText: string = `
-    1. Qui est responsable du traitement des données à caractère personnel ?
-    Le responsable du traitement des données à caractère personnel est GOLDEN PALACE CASINO BSM sas dont le siège social est établi à Place de la République 62200 Boulogne-sur-Mer (849 457 163 RCS Boulogne-sur-Mer) ci-après « l'Exploitant ». L'Exploitant fait partie du Groupe Golden Palace dont les membres sont actifs dans le secteur des jeux de hasard et paris sportifs, y compris en ligne.
-    2. Quelles données à caractère personnel?
-    L'Exploitant collecte et traite les données à caractère personnel suivantes :
-    * Nom
-    * Prénom
-    * Genre
-    * Date et lieu de naissance
-    * Nationalité
-    * Profession
-    * Numéro de gsm
-    * Photos
-    * Images enregistrées par des caméras
-    * Email
-    * Numéro national
-    * Adresse.
-    3. Pourquoi nous collectons vos données à caractère personnel?
-    Ces données sont traitées aux fins suivantes :
-    * Pour nous conformer à nos obligations légales;
-    * Dans le cadre de l'exécution de nos liens contractuels et différents objectifs organisationnels et d'affaires (tels que, la gestion des comptes, de services informatiques...);
-    * Gestion des risques et contrôles de qualité;
-    * Pour vous tenir informés des activités commerciales et sociales de l'Exploitant ou des autres membres du Golden Palace Groupe, par voie de communications électroniques (sms, e-mail, réseaux sociaux....).
-    4. Qui aura accès à vos données à caractère personnel?
-    Plusieurs entités peuvent avoir accès à vos données à caractère personnel:
-    * Les membres du Golden Palace Groupe;
-    * La Commission des jeux de hasard;
-    * Des fournisseurs belges, français et des fournisseurs situés dans l'Union européenne et auxquels nous faisons appel.
-    5. Mesures de sécurité
-    Le responsable de traitement a pris des mesures techniques et organisationnelles afin de garantir la sécurité de traitement de vos données. En cas de fuite de données personnelles, vous serez informé dans un délai de 72h suivant la découverte de la fuite.
-    6. Durée de conservation
-    Vos données personnelles sont conservées pour une durée de 10 ans.
-    7. Droits d'accès et de rectification
-    Vous avez le droit :
-    * De demander l'accès à vos données à caractère personnel
-    * De demander la rectification de vos données à caractère personnel
-    * De demander l'effacement de vos données à caractère personnel
-    * De demander une limitation du traitement
-    * De vous opposer au traitement
-    * A la portabilité de vos données.
-    Vous disposez également du droit d'introduire une réclamation auprès de l'autorité de contrôle. Pour toute question relative à la protection des données à caractère personnel, vous pouvez vous adresser par courrier postal à l'adresse postale de l'Exploitant, Place de la République 62200 Boulogne-sur-Mer ou par courrier électronique à serge.sacre@citexar.be avec une copie de votre carte d'identité.
-    8. Copie et consultation
-    Vous déclarez avoir reçu une copie électronique ou un support papier de ce document « Règles générales » et « Protection de la vie privée ». Notre politique de vie privée est consultable à tout moment sur le lien suivant: https://www.goldenpalace.fr
-  `; // This text is NOT translated as per user request
+  rulesText: string = '';
 
   mandatoryCheckbox: boolean = false;
   optionalCheckbox: boolean = false;
@@ -97,7 +68,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
 
   buttonState: 'idle' | 'loading' | 'success' = 'idle';
   showValidationPopup: boolean = false;
-  validationPopupMessage: string = ''; // Will be set in constructor
+  validationPopupMessage: string = '';
 
   private baseCheckboxLabelSizePx: number = 12;
   private defaultConditionsTextSizePx: number = this.predefinedTextSizes.medium;
@@ -116,48 +87,158 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   private pinchStartFontSize: number = 0;
   private rulesBodyElement: HTMLDivElement | null = null;
 
+  isLoadingInitialData: boolean = true;
+
   constructor(
-    private http: HttpClient,
     private route: ActivatedRoute,
     private router: Router,
     private webSocketService: AppWebSocketService,
     private renderer: Renderer2,
     private translate: TranslateService,
-    private apiservice: ApiService
+    private apiService: ApiService,
+    private configService: ConfigService,
+    private cdr: ChangeDetectorRef
   ) {
     this.playerPhotoUrl = `https://placehold.co/100x100/E0E0E0/757575?text=${this.translate.instant(
       'generic.loading'
     )}`;
     this.validationPopupMessage = this.translate.instant('alert.thankYou');
+    this.rulesText = this.translate.instant('generic.loading');
   }
 
   ngOnInit(): void {
     this.currentPlayerId = this.route.snapshot.paramMap.get('playerId');
-    this.consentId = '29547';
-
-    this.firstName = 'Joseph';
-    this.lastName = 'Viens';
-    this.birthDate = '23/07/1985';
-    this.cardIdNumber = 'ID Card, THGNF2LN1, 04/02/2034';
-
-    if (this.currentPlayerId) {
-      // this.fetchAndSetUserData(this.currentPlayerId);
-    } else {
+    if (!this.currentPlayerId) {
       this.playerPhotoUrl = `https://placehold.co/100x100/FF0000/FFFFFF?text=${this.translate.instant(
         'generic.error'
       )}+ID`;
+      this.rulesText = this.translate.instant('generic.apiError');
+      this.isLoadingInitialData = false;
+      this.handleCriticalError();
+      return;
     }
+
+    this.loadInitialData();
     this.applyTextSizeChangeSideEffects();
   }
 
-  fetchAndSetUserData(playerId: string): void {
-    this.apiservice.getPlayerData(playerId).subscribe((playerData) => {
-      // Values are hardcoded in ngOnInit for testing purposes
-      // this.firstName = playerData.firstName;
-      // this.lastName = playerData.lastName;
-      // this.birthDate = playerData.birthDate;
-      // this.cardIdNumber = playerId;
-    });
+  private loadInitialData(): void {
+    this.isLoadingInitialData = true;
+    this.cdr.detectChanges();
+
+    const searchModelForActiveConsent: SearchModel = {
+      first: 0,
+      rows: 1,
+      filters: [
+        {
+          field: 'status',
+          details: [{ value: 'Active', matchMode: FilterMatchMode.In }],
+        },
+      ],
+    };
+
+    forkJoin({
+      playerData: this.currentPlayerId
+        ? this.apiService.getPlayerData(this.currentPlayerId)
+        : of(null),
+      newConsentId: this.apiService.getNewConsentId(),
+      consentDefinitions: this.apiService.getConsentDefinitions(
+        searchModelForActiveConsent
+      ),
+    })
+      .pipe(
+        catchError((error) => {
+          console.error(
+            'Erreur lors du chargement des données initiales',
+            error
+          );
+          this.rulesText = this.translate.instant('generic.apiError');
+          this.isLoadingInitialData = false;
+          this.cdr.detectChanges();
+          this.handleCriticalError();
+          return of(null);
+        })
+      )
+      .subscribe((results) => {
+        if (!results) {
+          this.isLoadingInitialData = false;
+          this.cdr.detectChanges();
+          return;
+        }
+
+        const { playerData, newConsentId, consentDefinitions } = results;
+
+        if (playerData) {
+          this.firstName =
+            playerData.firstName || this.translate.instant('generic.na');
+          this.lastName =
+            playerData.lastName || this.translate.instant('generic.na');
+          this.birthDate = playerData.birthDate
+            ? new Date(playerData.birthDate).toLocaleDateString(
+                this.translate.currentLang || 'fr-FR'
+              )
+            : this.translate.instant('generic.na');
+          this.cardIdNumber =
+            this.currentPlayerId || this.translate.instant('generic.na');
+          if (playerData.photoUrl) {
+            this.playerPhotoUrl = playerData.photoUrl;
+          } else {
+            this.playerPhotoUrl = `https://placehold.co/100x100/E0E0E0/757575?text=${this.translate.instant(
+              'generic.na'
+            )}`;
+          }
+        } else {
+          this.firstName = this.translate.instant('generic.na');
+          this.lastName = this.translate.instant('generic.na');
+          this.birthDate = this.translate.instant('generic.na');
+          this.cardIdNumber =
+            this.currentPlayerId || this.translate.instant('generic.na');
+          this.playerPhotoUrl = `https://placehold.co/100x100/E0E0E0/757575?text=${this.translate.instant(
+            'generic.na'
+          )}`;
+        }
+
+        if (newConsentId && newConsentId.id) {
+          this.consentIdToDisplayAndSubmit = newConsentId.id;
+        } else {
+          console.error("Impossible d'obtenir un nouvel ID de consentement.");
+          this.rulesText = this.translate.instant('generic.apiError');
+          this.isLoadingInitialData = false;
+          this.cdr.detectChanges();
+          this.handleCriticalError();
+          return;
+        }
+
+        if (consentDefinitions && consentDefinitions.length > 0) {
+          this.currentConsentDefinition = consentDefinitions[0];
+          this.rulesText = this.currentConsentDefinition.text;
+          this.consentDefinitionIdToSubmit = this.currentConsentDefinition.id;
+          this.definitionUserIdApi =
+            this.currentConsentDefinition.userId || null;
+        } else {
+          console.error(
+            "Aucune définition de consentement active n'a été trouvée."
+          );
+          this.rulesText = this.translate.instant('generic.apiError');
+          this.isLoadingInitialData = false;
+          this.cdr.detectChanges();
+          this.handleCriticalError();
+          return;
+        }
+        this.isLoadingInitialData = false;
+        this.cdr.detectChanges();
+        setTimeout(() => this.checkScroll(), 0);
+      });
+  }
+
+  private handleCriticalError(): void {
+    const errorResponse: WebSocketMessage = {
+      Action: 'Consent',
+      PlayerId: this.currentPlayerId || undefined,
+      Status: false,
+    };
+    this.webSocketService.sendMessage(errorResponse);
+    this.router.navigate(['/logo'], { skipLocationChange: true });
   }
 
   ngAfterViewInit(): void {
@@ -285,11 +366,11 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
           maxWidth: 2.5,
         }
       );
-      this.signaturePad.addEventListener('beginStroke', () => {});
       this.signaturePad.addEventListener('endStroke', () => {
         this.signatureDataUrl = this.signaturePad.isEmpty()
           ? null
           : this.signaturePad.toDataURL();
+        this.cdr.detectChanges();
       });
       this.resizeSignaturePad();
     }
@@ -334,6 +415,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.signaturePad) {
       this.signaturePad.clear();
       this.signatureDataUrl = null;
+      this.cdr.detectChanges();
     }
   }
 
@@ -347,6 +429,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
       const threshold = 10;
       if (el.scrollHeight - el.scrollTop <= el.clientHeight + threshold) {
         this.hasReachedBottomOnce = true;
+        this.cdr.detectChanges();
       }
     }
   }
@@ -361,6 +444,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
       this.minTextSize,
       Math.min(this.maxTextSize, this.currentTextSizeInPx)
     );
+    this.cdr.detectChanges();
     setTimeout(() => this.checkScroll(), 0);
   }
 
@@ -374,9 +458,12 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
 
   isSubmitEnabled(): boolean {
     return (
+      !this.isLoadingInitialData &&
       this.mandatoryCheckbox &&
       !!this.signatureDataUrl &&
-      this.hasReachedBottomOnce
+      this.hasReachedBottomOnce &&
+      !!this.currentConsentDefinition &&
+      !!this.consentIdToDisplayAndSubmit
     );
   }
 
@@ -384,6 +471,8 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     if (!this.isSubmitEnabled() || this.buttonState !== 'idle') {
       if (this.buttonState !== 'idle') return;
       let message = this.translate.instant('alert.validationImpossible');
+      if (this.isLoadingInitialData)
+        message += `\n- ${this.translate.instant('generic.loading')}`;
       if (!this.hasReachedBottomOnce)
         message += `\n- ${this.translate.instant('alert.mustReadConditions')}`;
       if (!this.mandatoryCheckbox)
@@ -392,67 +481,130 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
         )}`;
       if (!this.signatureDataUrl)
         message += `\n- ${this.translate.instant('alert.signatureRequired')}`;
+      if (!this.currentConsentDefinition)
+        message += `\n- ${this.translate.instant('generic.apiError')}`;
+      if (!this.consentIdToDisplayAndSubmit)
+        message += `\n- ${this.translate.instant('generic.apiError')}`;
+
       alert(message);
       return;
     }
 
     this.buttonState = 'loading';
-
-    const consentResponse: WebSocketMessage = {
-      Action: 'Consent',
-      PlayerId: this.currentPlayerId || undefined,
-      Status: true,
-    };
-    this.webSocketService.sendMessage(consentResponse);
+    this.cdr.detectChanges();
 
     try {
       const pdfBlob = await this.generateConsentPdfAsBlob();
-      const formData = new FormData();
-      // pdfFileName is NOT translated as per user request
-      const pdfFileName = `Consentement_${this.lastName}_${this.firstName}_${this.currentPlayerId}.pdf`;
-      formData.append('pdfFile', pdfBlob, pdfFileName);
-      formData.append('playerId', this.currentPlayerId || 'unknown');
-      formData.append('consentId', this.consentId);
+      const pdfBase64 = await this.blobToBase64(pdfBlob);
 
-      const uploadUrl = 'http://localhost:4000/upload-pdf';
+      const now = new Date();
+      const endDate = new Date(now);
+      if (this.currentConsentDefinition?.consentYearsDuration) {
+        endDate.setFullYear(
+          now.getFullYear() + this.currentConsentDefinition.consentYearsDuration
+        );
+      } else {
+        endDate.setFullYear(now.getFullYear() + 1);
+      }
 
-      this.http.post(uploadUrl, formData).subscribe({
-        next: (response) => {
-          this.buttonState = 'success';
-          this.showValidationPopup = true;
-          if (this.navigationTimer) {
-            clearTimeout(this.navigationTimer);
-          }
-          this.navigationTimer = setTimeout(() => {
-            this.showValidationPopup = false;
-            this.router.navigate(['/logo'], { skipLocationChange: true });
+      const locationType = this.configService.getLocTyp();
+      const locationId = this.configService.getLocId();
+
+      if (!locationType || !locationId) {
+        console.error('Location Type ou Location ID manquant.');
+        alert(this.translate.instant('generic.apiError'));
+        this.buttonState = 'idle';
+        this.cdr.detectChanges();
+        return;
+      }
+
+      const location: LocationRef = {
+        type: locationType,
+        id: locationId,
+      };
+
+      const payload: PlayerConsentPOST = {
+        id: this.consentIdToDisplayAndSubmit,
+        consentDefinitionId: this.consentDefinitionIdToSubmit,
+        commercialConsent: this.optionalCheckbox,
+        startDate: now.toISOString(),
+        endDate: endDate.toISOString(),
+        pdf: pdfBase64,
+        userId:
+          this.definitionUserIdApi ||
+          this.configService.getToken() ||
+          undefined,
+        lastUpdatedTimestamp: now.toISOString(),
+        location: location,
+      };
+
+      this.apiService
+        .submitPlayerConsent(this.currentPlayerId!, payload)
+        .subscribe({
+          next: (response) => {
+            const wsMessage: WebSocketMessage = {
+              Action: 'Consent',
+              PlayerId: this.currentPlayerId || undefined,
+              Status: true,
+            };
+            this.webSocketService.sendMessage(wsMessage);
+
+            this.buttonState = 'success';
+            this.showValidationPopup = true;
+            this.cdr.detectChanges();
+
+            if (this.navigationTimer) {
+              clearTimeout(this.navigationTimer);
+            }
+            this.navigationTimer = setTimeout(() => {
+              this.showValidationPopup = false;
+              this.router.navigate(['/logo'], { skipLocationChange: true });
+              this.resetFormState();
+              this.buttonState = 'idle';
+              this.cdr.detectChanges();
+            }, 5000);
+          },
+          error: (err) => {
+            console.error(this.translate.instant('alert.pdfUploadError'), err);
+            alert(this.translate.instant('alert.pdfUploadErrorDetail'));
             this.buttonState = 'idle';
-            this.mandatoryCheckbox = false;
-            this.optionalCheckbox = false;
-            this.clearSignature();
-            this.hasReachedBottomOnce = false;
-            this.currentTextSizeInPx = this.predefinedTextSizes.medium;
-            this.applyTextSizeChangeSideEffects();
-            if (this.rulesBodyElement) this.rulesBodyElement.scrollTop = 0;
-          }, 5000);
-        },
-        error: (err) => {
-          console.error(
-            this.translate.instant('consent.alert.pdfUploadError'),
-            err
-          );
-          alert(this.translate.instant('consent.alert.pdfUploadErrorDetail'));
-          this.buttonState = 'idle';
-        },
-      });
+            this.cdr.detectChanges();
+          },
+        });
     } catch (error) {
-      console.error(
-        this.translate.instant('consent.alert.pdfGenerationError'),
-        error
-      );
-      alert(this.translate.instant('consent.alert.pdfGenerationError'));
+      console.error(this.translate.instant('alert.pdfGenerationError'), error);
+      alert(this.translate.instant('alert.pdfGenerationError'));
       this.buttonState = 'idle';
+      this.cdr.detectChanges();
     }
+  }
+
+  private resetFormState(): void {
+    this.mandatoryCheckbox = false;
+    this.optionalCheckbox = false;
+    this.clearSignature();
+    this.hasReachedBottomOnce = false;
+    this.currentTextSizeInPx = this.predefinedTextSizes.medium;
+    this.applyTextSizeChangeSideEffects();
+    if (this.rulesBodyElement) this.rulesBodyElement.scrollTop = 0;
+    this.rulesText = this.translate.instant('generic.loading');
+    this.consentIdToDisplayAndSubmit = '';
+    this.currentConsentDefinition = null;
+    this.isLoadingInitialData = true;
+  }
+
+  private blobToBase64(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = (reader.result as string).split(',')[1];
+        resolve(base64String);
+      };
+      reader.onerror = (error) => {
+        reject(error);
+      };
+      reader.readAsDataURL(blob);
+    });
   }
 
   private async generateConsentPdfAsBlob(): Promise<Blob> {
@@ -552,6 +704,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     if (this.playerPhotoUrl && !this.playerPhotoUrl.includes('placehold.co')) {
       const img = new Image();
+      img.crossOrigin = 'Anonymous';
       img.src = this.playerPhotoUrl;
       try {
         await new Promise<void>((resolve, reject) => {
@@ -620,7 +773,13 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'normal');
 
-    const splitRulesText = doc.splitTextToSize(this.rulesText, contentWidth);
+    const textToDisplayInPdf = this.currentConsentDefinition
+      ? this.currentConsentDefinition.text
+      : this.translate.instant('generic.na');
+    const splitRulesText = doc.splitTextToSize(
+      textToDisplayInPdf,
+      contentWidth
+    );
     const rulesLineHeight = 4;
     for (const line of splitRulesText) {
       addPageIfNeeded(rulesLineHeight);
@@ -679,7 +838,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     doc.setTextColor(255, 0, 0);
     doc.setFont('helvetica', 'bold');
-    const asteriskChar = this.translate.instant('generic.requiredMarker'); // Using existing generic key
+    const asteriskChar = this.translate.instant('generic.requiredMarker');
     doc.text(asteriskChar, manLabelX, tempY);
     manLabelX +=
       (doc.getStringUnitWidth(asteriskChar) * doc.getFontSize()) /
@@ -697,7 +856,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     const mainDeclarationText = this.translate.instant(
       'consent.pdf.mainDeclaration'
     );
-    const requiredText = '   ' + this.translate.instant('generic.requiredText'); // Using existing generic key
+    const requiredText = '   ' + this.translate.instant('generic.requiredText');
 
     const originalManFontSize = doc.getFontSize();
     let currentManFont = doc.getFont().fontName;
@@ -705,7 +864,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(originalManFontSize);
     const requiredTextWidth =
-      (doc.getStringUnitWidth(requiredText.trimStart()) * originalManFontSize) / // use trimStart for width calculation
+      (doc.getStringUnitWidth(requiredText.trimStart()) * originalManFontSize) /
         doc.internal.scaleFactor +
       1;
     doc.setFont(currentManFont, currentManStyle);
@@ -780,7 +939,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     doc.setFont('helvetica', 'normal');
     const communicationsNormalText = this.translate.instant(
-      'consent.pdf.mainDeclaration'
+      'consent.optionalCommunicationsLabelText'
     );
     const commTextLines = doc.splitTextToSize(
       communicationsNormalText,
@@ -883,21 +1042,34 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     const now = new Date();
-    const consentDateFormatted = now.toLocaleString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
+    const consentDateFormatted = now.toLocaleString(
+      this.translate.currentLang || 'fr-FR',
+      {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      }
+    );
     const validUntilDate = new Date(now);
-    validUntilDate.setFullYear(now.getFullYear() + 5);
-    const validUntilDateFormatted = validUntilDate.toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
+    if (this.currentConsentDefinition?.consentYearsDuration) {
+      validUntilDate.setFullYear(
+        now.getFullYear() + this.currentConsentDefinition.consentYearsDuration
+      );
+    } else {
+      validUntilDate.setFullYear(now.getFullYear() + 1);
+    }
+
+    const validUntilDateFormatted = validUntilDate.toLocaleDateString(
+      this.translate.currentLang || 'fr-FR',
+      {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      }
+    );
 
     const infoItemsForPdf = [
       {
@@ -910,7 +1082,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
       },
       {
         label: this.translate.instant('consent.pdf.consentIdLabel'),
-        value: this.consentId,
+        value: this.consentIdToDisplayAndSubmit,
       },
     ];
 
