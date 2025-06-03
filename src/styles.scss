@@ -196,3 +196,23 @@ canvas#signature-pad {
     color: white;
     border-color: #3b82f6;
 }
+
+
+@font-face {
+font-family: 'Inter Variable';
+font-style: normal;
+font-display: swap;
+font-weight: 100 900;
+src: url('assets/fonts/Inter-VariableFont_opsz,wght.ttf') format('truetype-variations');
+}
+body {
+font-family: 'Inter Variable', sans-serif;
+font-weight: 400;
+}
+h1, h2, h3, h4, h5, h6 {
+font-family: 'Inter Variable', sans-serif;
+}
+.mon-element-style {
+font-family: 'Inter Variable', sans-serif;
+font-weight: 600;
+}
