@@ -11,6 +11,9 @@ export class ConfigService {
   private wsPortInternal: string | null = null;
   private tokenInternal: string | null = null;
   private langInternal: string | null = null;
+  private siteIdInternal: string | null = null;
+  private locTypInternal: string | null = null;
+  private locIdInternal: string | null = null;
 
   constructor(private http: HttpClient) {}
 
@@ -51,6 +54,30 @@ export class ConfigService {
 
   getLang(): string | null {
     return this.langInternal;
+  }
+
+  setSiteId(siteId: string | null): void {
+    this.siteIdInternal = siteId;
+  }
+
+  setLocTyp(locTyp: string | null): void {
+    this.locTypInternal = locTyp;
+  }
+
+  setLocId(locId: string | null): void {
+    this.locIdInternal = locId;
+  }
+
+  getSiteId(): string | null {
+    return this.siteIdInternal;
+  }
+
+  getLocTyp(): string | null {
+    return this.locTypInternal;
+  }
+
+  getLocId(): string | null {
+    return this.locIdInternal;
   }
 }
 

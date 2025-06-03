@@ -36,16 +36,16 @@ export class AppComponent implements OnInit, OnDestroy {
     private activatedRoute: ActivatedRoute,
     private webSocketService: AppWebSocketService,
     private translate: TranslateService,
-    private configService: ConfigService
+    private configService: ConfigService //
   ) {
-    translate.setDefaultLang('fr');
+    translate.setDefaultLang('fr'); //
   }
 
   ngOnInit(): void {
-    this.processLaunchUrlParameters();
-    this.setupUrlCleaningOnNavigation();
-    this.handleWebSocketMessages();
-    this.setupDOMListeners();
+    this.processLaunchUrlParameters(); //
+    this.setupUrlCleaningOnNavigation(); //
+    this.handleWebSocketMessages(); //
+    this.setupDOMListeners(); //
   }
 
   private processLaunchUrlParameters(): void {
@@ -61,37 +61,37 @@ export class AppComponent implements OnInit, OnDestroy {
           if (wsPort !== null) {
             const token = params.get('token');
             const lang = params.get('lang');
+            const siteId = params.get('siteId');
+            const locTyp = params.get('locTyp');
+            const locId = params.get('locId');
 
-            this.configService.setWsPort(wsPort);
-            this.configService.setToken(token);
-            this.configService.setLang(lang);
+            this.configService.setWsPort(wsPort); //
+            this.configService.setToken(token); //
+            this.configService.setLang(lang); //
+            this.configService.setSiteId(siteId); //
+            this.configService.setLocTyp(locTyp); //
+            this.configService.setLocId(locId); //
 
             const languageToUse =
-              this.configService.getLang() || this.translate.getDefaultLang();
-            this.translate.use(languageToUse);
+              this.configService.getLang() || this.translate.getDefaultLang(); //
+            this.translate.use(languageToUse); //
 
             if (this.configService.getWsPort()) {
-              const wsUrl = `ws://localhost:${this.configService.getWsPort()}`;
-              this.webSocketService.connect(wsUrl);
+              const wsUrl = `ws://localhost:${this.configService.getWsPort()}`; //
+              this.webSocketService.connect(wsUrl); //
             } else {
-              console.warn(
-                "WARN: 'wsPort' a été détecté mais n'a pas pu être configuré. La connexion WebSocket pourrait échouer."
-              );
             }
-            this.initialLaunchParamsProcessed = true;
+            this.initialLaunchParamsProcessed = true; //
           }
         }),
         takeUntil(this.destroy$)
       )
       .subscribe();
 
-    timer(5000)
-      .pipe(takeUntil(this.destroy$))
+    timer(5000) //
+      .pipe(takeUntil(this.destroy$)) //
       .subscribe(() => {
         if (!this.initialLaunchParamsProcessed) {
-          console.warn(
-            "WARN: Aucun paramètre 'wsPort' détecté dans l'URL après 5 secondes. Assurez-vous que l'URL de lancement contient les paramètres attendus. La connexion WebSocket ne sera pas initiée."
-          );
         }
       });
   }
@@ -101,13 +101,14 @@ export class AppComponent implements OnInit, OnDestroy {
       .pipe(
         filter(
           (event): event is NavigationEnd => event instanceof NavigationEnd
-        ),
+        ), //
         tap((event: NavigationEnd) => {
           if (this.initialLaunchParamsProcessed) {
-            this.cleanUrlParamsFromNavigation(event);
+            //
+            this.cleanUrlParamsFromNavigation(event); //
           }
         }),
-        takeUntil(this.destroy$)
+        takeUntil(this.destroy$) //
       )
       .subscribe();
   }
@@ -115,57 +116,78 @@ export class AppComponent implements OnInit, OnDestroy {
   private cleanUrlParamsFromNavigation(navigationEvent: NavigationEnd): void {
     const urlTree: UrlTree = this.router.parseUrl(
       navigationEvent.urlAfterRedirects
-    );
-    const queryParams = { ...urlTree.queryParams };
+    ); //
+    const queryParams = { ...urlTree.queryParams }; //
 
     let paramsModified = false;
     if (queryParams['wsPort'] !== undefined) {
-      delete queryParams['wsPort'];
-      paramsModified = true;
+      delete queryParams['wsPort']; //
+      paramsModified = true; //
     }
     if (queryParams['token'] !== undefined) {
-      delete queryParams['token'];
-      paramsModified = true;
+      delete queryParams['token']; //
+      paramsModified = true; //
     }
     if (queryParams['lang'] !== undefined) {
-      delete queryParams['lang'];
+      delete queryParams['lang']; //
+      paramsModified = true; //
+    }
+    // Add cleaning for new parameters
+    if (queryParams['siteId'] !== undefined) {
+      delete queryParams['siteId'];
+      paramsModified = true;
+    }
+    if (queryParams['locTyp'] !== undefined) {
+      delete queryParams['locTyp'];
+      paramsModified = true;
+    }
+    if (queryParams['locId'] !== undefined) {
+      delete queryParams['locId'];
       paramsModified = true;
     }
 
     if (paramsModified) {
-      const pathOnly = navigationEvent.urlAfterRedirects.split('?')[0];
+      //
+      const pathOnly = navigationEvent.urlAfterRedirects.split('?')[0]; //
       this.router.navigate([pathOnly || '/'], {
-        queryParams: queryParams,
-        replaceUrl: true,
-        skipLocationChange: true,
+        //
+        queryParams: queryParams, //
+        replaceUrl: true, //
+        skipLocationChange: true, //
       });
     } else if (
       (navigationEvent.urlAfterRedirects === '/' ||
-        navigationEvent.urlAfterRedirects === '/#') &&
-      !paramsModified
+        navigationEvent.urlAfterRedirects === '/#') && //
+      !paramsModified //
     ) {
       this.router.navigate(['/logo'], {
-        replaceUrl: true,
-        skipLocationChange: true,
+        //
+        replaceUrl: true, //
+        skipLocationChange: true, //
       });
     }
   }
 
   private handleWebSocketMessages(): void {
     this.webSocketService.messages$
-      .pipe(takeUntil(this.destroy$))
+      .pipe(takeUntil(this.destroy$)) //
       .subscribe((message: WebSocketMessage) => {
-        const cleanQueryParams = {};
+        //
+        const cleanQueryParams = {}; //
 
         if (message.Action === 'Consent' && message.PlayerId) {
+          //
           this.router.navigate(['/consent', message.PlayerId], {
-            queryParams: cleanQueryParams,
-            skipLocationChange: true,
+            //
+            queryParams: cleanQueryParams, //
+            skipLocationChange: true, //
           });
         } else if (message.Action === 'Idle') {
+          //
           this.router.navigate(['/logo'], {
-            queryParams: cleanQueryParams,
-            skipLocationChange: true,
+            //
+            queryParams: cleanQueryParams, //
+            skipLocationChange: true, //
           });
         }
       });
@@ -175,60 +197,65 @@ export class AppComponent implements OnInit, OnDestroy {
     this.listeners.push(
       this.renderer.listen('window', 'contextmenu', (e: Event) =>
         e.preventDefault()
-      )
+      ) //
     );
     const touchStartListener = this.renderer.listen(
       this.document.body,
       'touchstart',
       (e: TouchEvent) => {
         if (e.touches.length > 1) {
-          e.preventDefault();
+          e.preventDefault(); //
         }
       }
     );
-    this.listeners.push(touchStartListener);
+    this.listeners.push(touchStartListener); //
 
     const touchMoveListener = this.renderer.listen(
       this.document.body,
       'touchmove',
       (e: TouchEvent) => {
         if (e.touches.length > 1) {
-          e.preventDefault();
+          e.preventDefault(); //
         }
       }
     );
-    this.listeners.push(touchMoveListener);
+    this.listeners.push(touchMoveListener); //
 
     this.listeners.push(
       this.renderer.listen('document', 'fullscreenchange', () => {
         if (!this.document.fullscreenElement) {
+          //
         }
       })
-    );
+    ); //
   }
 
   requestFullScreen(): void {
-    const elem = this.document.documentElement;
+    const elem = this.document.documentElement; //
     if (elem.requestFullscreen) {
-      elem
-        .requestFullscreen()
-        .catch((err) =>
-          console.warn(`Fullscreen request failed: ${err.message}`)
+      elem //
+        .requestFullscreen() //
+        .catch(
+          (err) => console.warn(`Fullscreen request failed: ${err.message}`) //
         );
     } else if ((elem as any).mozRequestFullScreen) {
-      (elem as any).mozRequestFullScreen();
+      //
+      (elem as any).mozRequestFullScreen(); //
     } else if ((elem as any).webkitRequestFullscreen) {
-      (elem as any).webkitRequestFullscreen();
+      //
+      (elem as any).webkitRequestFullscreen(); //
     } else if ((elem as any).msRequestFullscreen) {
-      (elem as any).msRequestFullscreen();
+      //
+      (elem as any).msRequestFullscreen(); //
     }
   }
 
   onKeydownHandler(event: KeyboardEvent): void {
     if (event.key === 'F11') {
-      event.preventDefault();
-      event.stopPropagation();
-      this.requestFullScreen();
+      //
+      event.preventDefault(); //
+      event.stopPropagation(); //
+      this.requestFullScreen(); //
     } else if (
       (event.ctrlKey &&
         event.shiftKey &&
@@ -237,19 +264,19 @@ export class AppComponent implements OnInit, OnDestroy {
           event.key === 'J' ||
           event.key === 'j' ||
           event.key === 'C' ||
-          event.key === 'c')) ||
-      (event.ctrlKey && (event.key === 'U' || event.key === 'u')) ||
-      event.key === 'Escape'
+          event.key === 'c')) || //
+      (event.ctrlKey && (event.key === 'U' || event.key === 'u')) || //
+      event.key === 'Escape' //
     ) {
-      event.preventDefault();
-      event.stopPropagation();
+      event.preventDefault(); //
+      event.stopPropagation(); //
     }
   }
 
   ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-    this.listeners.forEach((listener) => listener());
-    this.webSocketService.closeConnection();
+    this.destroy$.next(); //
+    this.destroy$.complete(); //
+    this.listeners.forEach((listener) => listener()); //
+    this.webSocketService.closeConnection(); //
   }
 }
