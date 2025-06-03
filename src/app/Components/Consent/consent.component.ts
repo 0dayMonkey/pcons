@@ -79,7 +79,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     Vous disposez également du droit d'introduire une réclamation auprès de l'autorité de contrôle. Pour toute question relative à la protection des données à caractère personnel, vous pouvez vous adresser par courrier postal à l'adresse postale de l'Exploitant, Place de la République 62200 Boulogne-sur-Mer ou par courrier électronique à serge.sacre@citexar.be avec une copie de votre carte d'identité.
     8. Copie et consultation
     Vous déclarez avoir reçu une copie électronique ou un support papier de ce document « Règles générales » et « Protection de la vie privée ». Notre politique de vie privée est consultable à tout moment sur le lien suivant: https://www.goldenpalace.fr
-  `;
+  `; // This text is NOT translated as per user request
 
   mandatoryCheckbox: boolean = false;
   optionalCheckbox: boolean = false;
@@ -97,7 +97,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
 
   buttonState: 'idle' | 'loading' | 'success' = 'idle';
   showValidationPopup: boolean = false;
-  validationPopupMessage: string = 'Merci de votre confiance !';
+  validationPopupMessage: string = ''; // Will be set in constructor
 
   private baseCheckboxLabelSizePx: number = 12;
   private defaultConditionsTextSizePx: number = this.predefinedTextSizes.medium;
@@ -128,6 +128,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     this.playerPhotoUrl = `https://placehold.co/100x100/E0E0E0/757575?text=${this.translate.instant(
       'generic.loading'
     )}`;
+    this.validationPopupMessage = this.translate.instant('alert.thankYou');
   }
 
   ngOnInit(): void {
@@ -407,6 +408,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     try {
       const pdfBlob = await this.generateConsentPdfAsBlob();
       const formData = new FormData();
+      // pdfFileName is NOT translated as per user request
       const pdfFileName = `Consentement_${this.lastName}_${this.firstName}_${this.currentPlayerId}.pdf`;
       formData.append('pdfFile', pdfBlob, pdfFileName);
       formData.append('playerId', this.currentPlayerId || 'unknown');
@@ -435,16 +437,20 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
           }, 5000);
         },
         error: (err) => {
-          console.error("Erreur lors de l'envoi du PDF au serveur:", err);
-          alert(
-            "Erreur lors de l'envoi du PDF au serveur. Vérifiez la console pour plus de détails."
+          console.error(
+            this.translate.instant('consent.alert.pdfUploadError'),
+            err
           );
+          alert(this.translate.instant('consent.alert.pdfUploadErrorDetail'));
           this.buttonState = 'idle';
         },
       });
     } catch (error) {
-      console.error('Erreur lors de la génération du PDF :', error);
-      alert('Erreur lors de la génération du PDF.');
+      console.error(
+        this.translate.instant('consent.alert.pdfGenerationError'),
+        error
+      );
+      alert(this.translate.instant('consent.alert.pdfGenerationError'));
       this.buttonState = 'idle';
     }
   }
@@ -472,7 +478,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(20);
     doc.setTextColor(0, 0, 0);
-    doc.text('Protection de la vie privée', margin, currentY);
+    doc.text(this.translate.instant('consent.pdf.title'), margin, currentY);
     currentY += 12;
 
     const photoWidth = 30;
@@ -494,14 +500,22 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     const valueCol2X = labelCol2X + 20;
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Nom :', labelCol1X, playerDetailsY);
+    doc.text(
+      this.translate.instant('consent.pdf.lastNameLabel'),
+      labelCol1X,
+      playerDetailsY
+    );
     doc.setFont('helvetica', 'normal');
     doc.text(this.lastName, valueCol1X, playerDetailsY, {
       maxWidth: playerInfoTextWidth / 2 - 37,
     });
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Prénom :', labelCol2X, playerDetailsY);
+    doc.text(
+      this.translate.instant('consent.pdf.firstNameLabel'),
+      labelCol2X,
+      playerDetailsY
+    );
     doc.setFont('helvetica', 'normal');
     doc.text(this.firstName, valueCol2X, playerDetailsY, {
       maxWidth: playerInfoTextWidth / 2 - 22,
@@ -509,14 +523,22 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     playerDetailsY += lineHeightForPlayerInfo;
 
     doc.setFont('helvetica', 'bold');
-    doc.text('Date de naissance :', labelCol1X, playerDetailsY);
+    doc.text(
+      this.translate.instant('consent.pdf.birthDateLabel'),
+      labelCol1X,
+      playerDetailsY
+    );
     doc.setFont('helvetica', 'normal');
     doc.text(this.birthDate, valueCol1X, playerDetailsY, {
       maxWidth: playerInfoTextWidth / 2 - 37,
     });
 
     doc.setFont('helvetica', 'bold');
-    doc.text('ID Joueur :', labelCol2X, playerDetailsY);
+    doc.text(
+      this.translate.instant('consent.pdf.playerIDLabel'),
+      labelCol2X,
+      playerDetailsY
+    );
     doc.setFont('helvetica', 'normal');
     doc.text(this.cardIdNumber, valueCol2X, playerDetailsY, {
       maxWidth: playerInfoTextWidth / 2 - 22,
@@ -550,7 +572,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
             doc.setFontSize(8);
             doc.setTextColor(150, 150, 150);
             doc.text(
-              'Photo',
+              this.translate.instant('consent.pdf.photoPlaceholder'),
               photoX + photoWidth / 2,
               photoFinalY + photoHeight / 2,
               { align: 'center', baseline: 'middle' }
@@ -564,7 +586,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
         doc.setFontSize(8);
         doc.setTextColor(150, 150, 150);
         doc.text(
-          'Photo',
+          this.translate.instant('consent.pdf.photoPlaceholder'),
           photoX + photoWidth / 2,
           photoFinalY + photoHeight / 2,
           { align: 'center', baseline: 'middle' }
@@ -576,7 +598,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
       doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);
       doc.text(
-        'Photo',
+        this.translate.instant('consent.pdf.photoPlaceholder'),
         photoX + photoWidth / 2,
         photoFinalY + photoHeight / 2,
         { align: 'center', baseline: 'middle' }
@@ -611,7 +633,11 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
     doc.setTextColor(0, 0, 0);
-    doc.text('Accords Donnés', margin, currentY);
+    doc.text(
+      this.translate.instant('consent.pdf.agreementsTitle'),
+      margin,
+      currentY
+    );
     currentY += 8;
 
     doc.setDrawColor(200, 200, 200);
@@ -653,23 +679,25 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     doc.setTextColor(255, 0, 0);
     doc.setFont('helvetica', 'bold');
-    const asteriskChar = '*';
+    const asteriskChar = this.translate.instant('generic.requiredMarker'); // Using existing generic key
     doc.text(asteriskChar, manLabelX, tempY);
     manLabelX +=
       (doc.getStringUnitWidth(asteriskChar) * doc.getFontSize()) /
       doc.internal.scaleFactor;
 
     doc.setTextColor(0, 0, 0);
-    const consentBoldText = ' Consentement : ';
+    const consentBoldText =
+      ' ' + this.translate.instant('consent.pdf.consentLabel') + ' : ';
     doc.text(consentBoldText, manLabelX, tempY);
     manLabelX +=
       (doc.getStringUnitWidth(consentBoldText) * doc.getFontSize()) /
       doc.internal.scaleFactor;
 
     doc.setFont('helvetica', 'normal');
-    const mainDeclarationText =
-      'Vous déclarez avoir pris connaissance de ce qui précède et vous donnez votre consentement, dans la mesure nécessaire, au contenu de ce paragraphe.';
-    const requiredText = '   Requis';
+    const mainDeclarationText = this.translate.instant(
+      'consent.pdf.mainDeclaration'
+    );
+    const requiredText = '   ' + this.translate.instant('generic.requiredText'); // Using existing generic key
 
     const originalManFontSize = doc.getFontSize();
     let currentManFont = doc.getFont().fontName;
@@ -677,7 +705,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(originalManFontSize);
     const requiredTextWidth =
-      (doc.getStringUnitWidth(requiredText) * originalManFontSize) /
+      (doc.getStringUnitWidth(requiredText.trimStart()) * originalManFontSize) / // use trimStart for width calculation
         doc.internal.scaleFactor +
       1;
     doc.setFont(currentManFont, currentManStyle);
@@ -743,15 +771,17 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     let optLabelX = margin + checkboxTextOffsetX;
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'bold');
-    const communicationsBoldText = 'Communications : ';
+    const communicationsBoldText =
+      this.translate.instant('consent.pdf.communicationsLabel') + ' : ';
     doc.text(communicationsBoldText, optLabelX, tempY);
     optLabelX +=
       (doc.getStringUnitWidth(communicationsBoldText) * doc.getFontSize()) /
       doc.internal.scaleFactor;
 
     doc.setFont('helvetica', 'normal');
-    const communicationsNormalText =
-      'Vous déclarez avoir pris connaissance de ce qui précède et vous donnez votre consentement, dans la mesure nécessaire, au contenu de ce paragraphe.';
+    const communicationsNormalText = this.translate.instant(
+      'consent.pdf.mainDeclaration'
+    );
     const commTextLines = doc.splitTextToSize(
       communicationsNormalText,
       contentWidth -
@@ -774,7 +804,11 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
     doc.setTextColor(0, 0, 0);
-    doc.text('Signature & information', margin, currentY);
+    doc.text(
+      this.translate.instant('consent.pdf.signatureInfoTitle'),
+      margin,
+      currentY
+    );
     currentY += 8;
 
     doc.setDrawColor(200, 200, 200);
@@ -866,9 +900,18 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     });
 
     const infoItemsForPdf = [
-      { label: 'Date du consentement :', value: consentDateFormatted },
-      { label: "Valide jusqu'au :", value: validUntilDateFormatted },
-      { label: 'ID du consentement :', value: this.consentId },
+      {
+        label: this.translate.instant('consent.pdf.consentDateLabel'),
+        value: consentDateFormatted,
+      },
+      {
+        label: this.translate.instant('consent.pdf.validUntilLabel'),
+        value: validUntilDateFormatted,
+      },
+      {
+        label: this.translate.instant('consent.pdf.consentIdLabel'),
+        value: this.consentId,
+      },
     ];
 
     const textInfoBlockActualHeight =
@@ -906,7 +949,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
       doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);
       doc.text(
-        'Signature non fournie',
+        this.translate.instant('consent.pdf.signatureNotProvided'),
         margin + signatureMaxWidth / 2,
         centeredSignatureY + signatureActualHeight / 2,
         { align: 'center', baseline: 'middle' }
@@ -939,13 +982,17 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     currentY = sigInfoStartY + overallSectionHeight + 10;
 
-    const totalPages = doc.getNumberOfPages();
+    const totalPages = (doc as any).internal.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i);
       doc.setFontSize(8);
       doc.setTextColor(100, 100, 100);
       doc.text(
-        `Page ${i} sur ${totalPages}`,
+        `${this.translate.instant(
+          'consent.pdf.pagePrefixLabel'
+        )}${i}${this.translate.instant(
+          'consent.pdf.pageSeparatorLabel'
+        )}${totalPages}`,
         pageWidth - margin,
         pageHeight - margin + 7,
         { align: 'right' }

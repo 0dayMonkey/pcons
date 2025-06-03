@@ -13,6 +13,25 @@
     "clearButton": "Clear",
     "validateButton": {
       "idle": "Validate"
+    },
+    "pdf": {
+      "title": "Privacy Policy",
+      "lastNameLabel": "Last Name:",
+      "firstNameLabel": "First Name:",
+      "birthDateLabel": "Date of Birth:",
+      "playerIDLabel": "Player ID:",
+      "photoPlaceholder": "Photo",
+      "agreementsTitle": "Agreements Given",
+      "consentLabel": "Consent",
+      "mainDeclaration": "You declare that you have read the foregoing and you give your consent, to the extent necessary, to the content of this paragraph.",
+      "communicationsLabel": "Communications",
+      "signatureInfoTitle": "Signature & Information",
+      "signatureNotProvided": "Signature not provided",
+      "consentDateLabel": "Consent Date:",
+      "validUntilLabel": "Valid Until:",
+      "consentIdLabel": "Consent ID:",
+      "pagePrefixLabel": "Page ",
+      "pageSeparatorLabel": " of "
     }
   },
   "alert": {
@@ -20,13 +39,18 @@
     "mustReadConditions": "- Please read all conditions.",
     "mandatoryCheckboxRequired": "- The mandatory consent checkbox must be checked.",
     "signatureRequired": "- Signature is required.",
-    "thankYou": "Thank you for your trust!"
+    "thankYou": "Thank you for your trust!",
+    "pdfUploadError": "Error sending PDF to server:",
+    "pdfUploadErrorDetail": "Error sending PDF to server. Check console for details.",
+    "pdfGenerationError": "Error generating PDF."
   },
   "generic": {
     "loading": "Loading...",
     "error": "Error",
     "playerID": "Player ID",
     "na": "N/A",
-    "apiError": "API Error"
+    "apiError": "API Error",
+    "requiredMarker": "*",
+    "requiredText": "Required"
   }
 }

@@ -1,14 +1,33 @@
-import { Injectable } from '@angular/core';
+import { ApplicationInitStatus, Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable, of, tap } from 'rxjs';
+import { ApiService } from './api.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class ConfigService {
+  config: IAppConfig | undefined;
   private wsPortInternal: string | null = null;
   private tokenInternal: string | null = null;
   private langInternal: string | null = null;
 
-  constructor() {}
+  constructor(private http: HttpClient) {}
+
+  public getConfig(): Observable<IAppConfig> {
+    if (this.config) {
+      return of(this.config);
+    }
+    const jsonFile = '../assets/config.json';
+    return this.http.get<IAppConfig>(jsonFile).pipe(
+      tap((data) => {
+        if (data.apiUrl && !data.apiUrl.endsWith('/')) {
+          data.apiUrl += '/';
+        }
+        this.config = data;
+      })
+    );
+  }
 
   setWsPort(port: string | null): void {
     this.wsPortInternal = port;
@@ -33,4 +52,8 @@ export class ConfigService {
   getLang(): string | null {
     return this.langInternal;
   }
+}
+
+export interface IAppConfig {
+  apiUrl: string;
 }

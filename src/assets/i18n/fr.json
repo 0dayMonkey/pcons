@@ -5,18 +5,33 @@
     "firstNameLabel": "Prénom",
     "birthDateLabel": "Né(e) le:",
     "privacyPolicyTitle": "Protection de la vie privée",
-
-    "consentLabel": "Consentement", 
+    "consentLabel": "Consentement",
     "consentDeclarationText": " Vous déclarez avoir pris connaissance de ce qui précède et vous donnez votre consentement, dans la mesure nécessaire, au contenu de ce paragraphe.",
-
-
-    "optionalCommunicationsLabelBold": "Communications:", 
-    "optionalCommunicationsLabelText": "       Vous souhaitez être tenus informés des activités commerciales et sociales de l’Exploitant par voie de communications électroniques (SMS, e-mail, réseaux sociaux...). Vous aurez la possibilité de vous désinscrire à tout moment", 
-
-    "signatureLabel": "Signature Manuscrite", 
+    "optionalCommunicationsLabelBold": "Communications:",
+    "optionalCommunicationsLabelText": "       Vous souhaitez être tenus informés des activités commerciales et sociales de l’Exploitant par voie de communications électroniques (SMS, e-mail, réseaux sociaux...). Vous aurez la possibilité de vous désinscrire à tout moment",
+    "signatureLabel": "Signature Manuscrite",
     "clearButton": "Effacer",
     "validateButton": {
       "idle": "Valider"
+    },
+    "pdf": {
+      "title": "Protection de la vie privée",
+      "lastNameLabel": "Nom :",
+      "firstNameLabel": "Prénom :",
+      "birthDateLabel": "Date de naissance :",
+      "playerIDLabel": "ID Joueur :",
+      "photoPlaceholder": "Photo",
+      "agreementsTitle": "Accords Donnés",
+      "consentLabel": "Consentement",
+      "mainDeclaration": "Vous déclarez avoir pris connaissance de ce qui précède et vous donnez votre consentement, dans la mesure nécessaire, au contenu de ce paragraphe.",
+      "communicationsLabel": "Communications",
+      "signatureInfoTitle": "Signature & information",
+      "signatureNotProvided": "Signature non fournie",
+      "consentDateLabel": "Date du consentement :",
+      "validUntilLabel": "Valide jusqu'au :",
+      "consentIdLabel": "ID du consentement :",
+      "pagePrefixLabel": "Page ",
+      "pageSeparatorLabel": " sur "
     }
   },
   "alert": {
@@ -24,7 +39,10 @@
     "mustReadConditions": "- Veuillez lire toutes les conditions.",
     "mandatoryCheckboxRequired": "- La case de consentement obligatoire doit être cochée.",
     "signatureRequired": "- La signature est requise.",
-    "thankYou": "Merci de votre confiance !"
+    "thankYou": "Merci de votre confiance !",
+    "pdfUploadError": "Erreur lors de l'envoi du PDF au serveur:",
+    "pdfUploadErrorDetail": "Erreur lors de l'envoi du PDF au serveur. Vérifiez la console pour plus de détails.",
+    "pdfGenerationError": "Erreur lors de la génération du PDF."
   },
   "generic": {
     "loading": "Chargement...",
@@ -32,7 +50,7 @@
     "playerID": "ID Joueur",
     "na": "N/A",
     "apiError": "Erreur API",
-    "requiredMarker": "*", 
-    "requiredText": "Requis" 
+    "requiredMarker": "*",
+    "requiredText": "Requis"
   }
 }

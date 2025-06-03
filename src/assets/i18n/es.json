@@ -6,13 +6,32 @@
     "birthDateLabel": "Nacido el:",
     "privacyPolicyTitle": "Política de Privacidad",
     "mandatoryConsentLabelBold": "Consentimiento:",
-    "mandatoryConsentLabelText": " Declaro que he leído y doy mi consentimiento a los términos de uso y la política de privacidad. (obligatorio)",
+    "mandatoryConsentLabelText": " Declaro que he leído y doy mi consentimiento a los términos de uso y la política de privacida. (obligatorio)",
     "optionalCommunicationsLabelBold": "Comunicaciones:",
     "optionalCommunicationsLabelText": " Acepto ser contactado por SMS y correo electrónico para ventajas promocionales e información del casino",
     "signatureLabel": "Firma Manuscrita",
     "clearButton": "Borrar",
     "validateButton": {
       "idle": "Validar"
+    },
+    "pdf": {
+      "title": "Política de Privacidad",
+      "lastNameLabel": "Apellido:",
+      "firstNameLabel": "Nombre:",
+      "birthDateLabel": "Fecha de Nacimiento:",
+      "playerIDLabel": "ID del Jugador:",
+      "photoPlaceholder": "Foto",
+      "agreementsTitle": "Acuerdos Otorgados",
+      "consentLabel": "Consentimiento",
+      "mainDeclaration": "Declara haber leído lo anterior y da su consentimiento, en la medida necesaria, al contenido de este párrafo.",
+      "communicationsLabel": "Comunicaciones",
+      "signatureInfoTitle": "Firma e Información",
+      "signatureNotProvided": "Firma no proporcionada",
+      "consentDateLabel": "Fecha de Consentimiento:",
+      "validUntilLabel": "Válido Hasta:",
+      "consentIdLabel": "ID de Consentimiento:",
+      "pagePrefixLabel": "Página ",
+      "pageSeparatorLabel": " de "
     }
   },
   "alert": {
@@ -20,13 +39,18 @@
     "mustReadConditions": "- Por favor, lea todas las condiciones.",
     "mandatoryCheckboxRequired": "- La casilla de consentimiento obligatorio debe estar marcada.",
     "signatureRequired": "- Se requiere la firma.",
-    "thankYou": "¡Gracias por su confianza!"
+    "thankYou": "¡Gracias por su confianza!",
+    "pdfUploadError": "Error al enviar el PDF al servidor:",
+    "pdfUploadErrorDetail": "Error al enviar el PDF al servidor. Revise la consola para más detalles.",
+    "pdfGenerationError": "Error al generar el PDF."
   },
   "generic": {
     "loading": "Cargando...",
     "error": "Error",
     "playerID": "ID del Jugador",
     "na": "N/D",
-    "apiError": "Error de API"
+    "apiError": "Error de API",
+    "requiredMarker": "*",
+    "requiredText": "Requerido"
   }
 }

@@ -13,6 +13,25 @@
     "clearButton": "Löschen",
     "validateButton": {
       "idle": "Bestätigen"
+    },
+    "pdf": {
+      "title": "Datenschutzrichtlinie",
+      "lastNameLabel": "Nachname:",
+      "firstNameLabel": "Vorname:",
+      "birthDateLabel": "Geburtsdatum:",
+      "playerIDLabel": "Spieler-ID:",
+      "photoPlaceholder": "Foto",
+      "agreementsTitle": "Gegebene Zustimmungen",
+      "consentLabel": "Einwilligung",
+      "mainDeclaration": "Sie erklären, dass Sie das Vorstehende gelesen haben und geben Ihre Einwilligung, soweit erforderlich, zum Inhalt dieses Absatzes.",
+      "communicationsLabel": "Mitteilungen",
+      "signatureInfoTitle": "Unterschrift & Informationen",
+      "signatureNotProvided": "Unterschrift nicht vorhanden",
+      "consentDateLabel": "Datum der Einwilligung:",
+      "validUntilLabel": "Gültig Bis:",
+      "consentIdLabel": "Einwilligungs-ID:",
+      "pagePrefixLabel": "Seite ",
+      "pageSeparatorLabel": " von "
     }
   },
   "alert": {
@@ -20,13 +39,18 @@
     "mustReadConditions": "- Bitte lesen Sie alle Bedingungen.",
     "mandatoryCheckboxRequired": "- Das Kontrollkästchen für die obligatorische Einwilligung muss aktiviert sein.",
     "signatureRequired": "- Unterschrift ist erforderlich.",
-    "thankYou": "Danke für Ihr Vertrauen!"
+    "thankYou": "Danke für Ihr Vertrauen!",
+    "pdfUploadError": "Fehler beim Senden des PDFs an den Server:",
+    "pdfUploadErrorDetail": "Fehler beim Senden des PDFs an den Server. Überprüfen Sie die Konsole für Details.",
+    "pdfGenerationError": "Fehler beim Generieren des PDFs."
   },
   "generic": {
     "loading": "Laden...",
     "error": "Fehler",
     "playerID": "Spieler-ID",
     "na": "N/A",
-    "apiError": "API-Fehler"
+    "apiError": "API-Fehler",
+    "requiredMarker": "*",
+    "requiredText": "Erforderlich"
   }
 }
