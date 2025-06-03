@@ -1,6 +1,6 @@
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { ConfigService } from './config.service';
 
@@ -97,18 +97,48 @@ export interface NewConsentIdResponse {
 })
 export class ApiService {
   private apiUrl: string = '';
+  private apiConfigLoaded: boolean = false;
+  private apiConfigError: boolean = false;
 
   constructor(private configService: ConfigService, private http: HttpClient) {
-    this.configService.getConfig().subscribe((config) => {
-      if (config && config.apiUrl) {
-        this.apiUrl = config.apiUrl;
-        if (!this.apiUrl.endsWith('/')) {
-          this.apiUrl += '/';
+    this.configService.getConfig().subscribe({
+      next: (config) => {
+        if (config && config.apiUrl) {
+          this.apiUrl = config.apiUrl;
+          if (!this.apiUrl.endsWith('/')) {
+            this.apiUrl += '/';
+          }
+          this.apiConfigLoaded = true;
+        } else {
+          console.error("URL de l'API non configurée dans config.json");
+          this.apiConfigError = true;
+          this.apiConfigLoaded = true;
         }
-      } else {
-        this.apiUrl = 'http://localhost:3000/';
-      }
+      },
+      error: (err) => {
+        console.error(
+          "Erreur lors du chargement de la configuration de l'API",
+          err
+        );
+        this.apiConfigError = true;
+        this.apiConfigLoaded = true;
+      },
     });
+  }
+
+  private checkApiUrl(): Observable<never> | null {
+    if (!this.apiConfigLoaded) {
+      return throwError(
+        () => new Error('La configuration de l_API n_est pas encore chargée.')
+      );
+    }
+    if (this.apiConfigError || !this.apiUrl) {
+      return throwError(
+        () =>
+          new Error("URL de l'API non disponible ou erreur de configuration.")
+      );
+    }
+    return null;
   }
 
   private getHeaders(isJsonContent: boolean = true): HttpHeaders {
@@ -124,9 +154,9 @@ export class ApiService {
   }
 
   getPlayerData(playerId: string): Observable<any> {
-    if (!this.apiUrl) {
-      return of(null);
-    }
+    const errorCheck = this.checkApiUrl();
+    if (errorCheck) return errorCheck;
+
     const url = `${this.apiUrl}player/${playerId}`;
     return this.http.get<any>(url, { headers: this.getHeaders() });
   }
@@ -134,9 +164,9 @@ export class ApiService {
   getConsentDefinitions(
     searchModel: SearchModel
   ): Observable<ConsentDefinitionResponse[]> {
-    if (!this.apiUrl) {
-      return of([]);
-    }
+    const errorCheck = this.checkApiUrl();
+    if (errorCheck) return errorCheck;
+
     const url = `${this.apiUrl}api/web/v1/consent-definitions`;
 
     let params = new HttpParams();
@@ -161,15 +191,15 @@ export class ApiService {
             'Erreur lors de la récupération des définitions de consentement',
             err
           );
-          return of([]);
+          return throwError(() => err);
         })
       );
   }
 
   getNewConsentId(): Observable<NewConsentIdResponse> {
-    if (!this.apiUrl) {
-      return of({ id: '' });
-    }
+    const errorCheck = this.checkApiUrl();
+    if (errorCheck) return errorCheck;
+
     const url = `${this.apiUrl}api/web/v1/consents/new-id`;
     return this.http.get<NewConsentIdResponse>(url, {
       headers: this.getHeaders(),
@@ -180,9 +210,9 @@ export class ApiService {
     playerId: string,
     consentData: PlayerConsentPOST
   ): Observable<any> {
-    if (!this.apiUrl) {
-      return of(null);
-    }
+    const errorCheck = this.checkApiUrl();
+    if (errorCheck) return errorCheck;
+
     const url = `${this.apiUrl}api/web/v1/players/${playerId}/consents`;
     return this.http.post(url, consentData, { headers: this.getHeaders() });
   }
