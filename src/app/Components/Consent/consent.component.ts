@@ -29,7 +29,7 @@ import {
 } from '../../Services/api.service';
 import { ConfigService } from '../../Services/config.service';
 import { forkJoin, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, switchMap, first } from 'rxjs/operators';
 
 @Component({
   selector: 'app-consent',
@@ -44,7 +44,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   lastName: string = '';
   birthDate: string = '';
   cardIdNumber: string = '';
-  playerPhotoUrl: string = 'https://placehold.co/100x100/E0E0E0/757575?text=';
+  playerPhotoUrl: string = '';
   private currentPlayerId: string | null = null;
   private currentConsentDefinition: ConsentDefinitionResponse | null = null;
   private consentDefinitionIdToSubmit: number = 0;
@@ -126,27 +126,19 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     this.isLoadingInitialData = true;
     this.cdr.detectChanges();
 
-    const searchModelForActiveConsent: SearchModel = {
-      first: 0,
-      rows: 1,
-      filters: [
-        {
-          field: 'status',
-          details: [{ value: 'Active', matchMode: FilterMatchMode.In }],
-        },
-      ],
-    };
-
-    forkJoin({
-      playerData: this.currentPlayerId
-        ? this.apiService.getPlayerData(this.currentPlayerId)
-        : of(null),
-      newConsentId: this.apiService.getNewConsentId(),
-      consentDefinitions: this.apiService.getConsentDefinitions(
-        searchModelForActiveConsent
-      ),
-    })
+    this.configService
+      .getConfig()
       .pipe(
+        first(),
+        switchMap(() => {
+          return forkJoin({
+            playerData: this.currentPlayerId
+              ? this.apiService.getPlayerData(this.currentPlayerId)
+              : of(null),
+            newConsentId: this.apiService.getNewConsentId(),
+            consentDefinitions: this.apiService.getActiveConsentDefinition(),
+          });
+        }),
         catchError((error) => {
           console.error(
             'Erreur lors du chargement des données initiales',
@@ -198,8 +190,8 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
           )}`;
         }
 
-        if (newConsentId && newConsentId.id) {
-          this.consentIdToDisplayAndSubmit = newConsentId.id;
+        if (newConsentId) {
+          this.consentIdToDisplayAndSubmit = newConsentId;
         } else {
           console.error("Impossible d'obtenir un nouvel ID de consentement.");
           this.rulesText = this.translate.instant('generic.apiError');
@@ -209,8 +201,8 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
           return;
         }
 
-        if (consentDefinitions && consentDefinitions.length > 0) {
-          this.currentConsentDefinition = consentDefinitions[0];
+        if (consentDefinitions) {
+          this.currentConsentDefinition = consentDefinitions;
           this.rulesText = this.currentConsentDefinition.text;
           this.consentDefinitionIdToSubmit = this.currentConsentDefinition.id;
           this.definitionUserIdApi =
@@ -226,8 +218,11 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
           return;
         }
         this.isLoadingInitialData = false;
+        this.hasReachedBottomOnce = false;
         this.cdr.detectChanges();
-        setTimeout(() => this.checkScroll(), 0);
+        setTimeout(() => {
+          this.checkScroll();
+        }, 50);
       });
   }
 
@@ -265,7 +260,6 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
         this.onTouchEnd.bind(this)
       );
     }
-    this.checkScroll();
 
     this.resizeObserver = new ResizeObserver(() => {
       if (
@@ -444,8 +438,11 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
       this.minTextSize,
       Math.min(this.maxTextSize, this.currentTextSizeInPx)
     );
+    this.hasReachedBottomOnce = false;
     this.cdr.detectChanges();
-    setTimeout(() => this.checkScroll(), 0);
+    setTimeout(() => {
+      this.checkScroll();
+    }, 50);
   }
 
   getScaledCheckboxLabelSize(): number {

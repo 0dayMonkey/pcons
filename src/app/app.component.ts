@@ -59,11 +59,11 @@ export class AppComponent implements OnInit, OnDestroy {
           const wsPort = params.get('wsPort');
 
           if (wsPort !== null) {
-            const token = params.get('token');
-            const lang = params.get('lang');
-            const siteId = params.get('siteId');
-            const locTyp = params.get('locTyp');
-            const locId = params.get('locId');
+            const token = params.get('token') ?? "";
+            const lang = params.get('lang') ?? "";
+            const siteId = params.get('siteId') ?? "";
+            const locTyp = params.get('locTyp') ?? "";
+            const locId = params.get('locId') ?? "";
 
             this.configService.setWsPort(wsPort); //
             this.configService.setToken(token); //

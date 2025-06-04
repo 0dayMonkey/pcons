@@ -1,8 +1,9 @@
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, map } from 'rxjs/operators';
 import { ConfigService } from './config.service';
+import { UrlSerializer } from '@angular/router';
 
 export enum ConsentDefinitionStatusResponse {
   Draft = 0,
@@ -57,6 +58,11 @@ export interface SearchModel {
   pageSize?: number;
 }
 
+export interface SearchResult {
+  totalItems: number,
+  items: ConsentDefinitionResponse[],
+}
+
 export interface ConsentDefinitionResponse {
   id: number;
   name?: string;
@@ -86,10 +92,6 @@ export interface PlayerConsentPOST {
   userId?: string;
   lastUpdatedTimestamp?: string;
   location: LocationRef;
-}
-
-export interface NewConsentIdResponse {
-  id: string;
 }
 
 @Injectable({
@@ -157,31 +159,41 @@ export class ApiService {
     const errorCheck = this.checkApiUrl();
     if (errorCheck) return errorCheck;
 
-    const url = `${this.apiUrl}player/${playerId}`;
+    const url = `${this.apiUrl}api/web/v1/players/${playerId}`;
     return this.http.get<any>(url, { headers: this.getHeaders() });
   }
 
-  getConsentDefinitions(
-    searchModel: SearchModel
-  ): Observable<ConsentDefinitionResponse[]> {
+  getPlayerPicture(playerId: string): Observable<any> {
+    const errorCheck = this.checkApiUrl();
+    if (errorCheck) return errorCheck;
+
+    const url = `${this.apiUrl}api/web/v1/players/${playerId}/pictures/Default`;
+    return this.http.get<any>(url, { headers: this.getHeaders() });
+  }
+
+  getActiveConsentDefinition(): Observable<ConsentDefinitionResponse> {
+
+    const searchModelForActiveConsent: SearchModel = {
+      first: 0,
+      rows: 1,
+      filters: [
+        {
+          field: 'status',
+          details: [{ value: 'Active', matchMode: FilterMatchMode.In }],
+        },
+      ],
+    };
+
     const errorCheck = this.checkApiUrl();
     if (errorCheck) return errorCheck;
 
     const url = `${this.apiUrl}api/web/v1/consent-definitions`;
 
     let params = new HttpParams();
-    if (searchModel.first !== undefined) {
-      params = params.set('First', searchModel.first.toString());
-    }
-    if (searchModel.rows !== undefined) {
-      params = params.set('Rows', searchModel.rows.toString());
-    }
-    if (searchModel.filters) {
-      params = params.set('Filters', JSON.stringify(searchModel.filters));
-    }
+    params = params.set('searchJson', JSON.stringify(searchModelForActiveConsent));
 
     return this.http
-      .get<ConsentDefinitionResponse[]>(url, {
+      .get<SearchResult>(url, {
         headers: this.getHeaders(false),
         params: params,
       })
@@ -192,17 +204,18 @@ export class ApiService {
             err
           );
           return throwError(() => err);
-        })
+        }),
+        map(x => x.items[0])
       );
   }
 
-  getNewConsentId(): Observable<NewConsentIdResponse> {
+  getNewConsentId(): Observable<string> {
     const errorCheck = this.checkApiUrl();
     if (errorCheck) return errorCheck;
 
     const url = `${this.apiUrl}api/web/v1/consents/new-id`;
-    return this.http.get<NewConsentIdResponse>(url, {
-      headers: this.getHeaders(),
+    return this.http.request('POST', url, {
+      headers: this.getHeaders(false), responseType: 'text'
     });
   }
 
@@ -214,6 +227,8 @@ export class ApiService {
     if (errorCheck) return errorCheck;
 
     const url = `${this.apiUrl}api/web/v1/players/${playerId}/consents`;
-    return this.http.post(url, consentData, { headers: this.getHeaders() });
+    const header = this.getHeaders();
+    header.append("Site-Origin-ID", this.configService.getSiteId())
+    return this.http.post(url, consentData, { headers: header });
   }
 }

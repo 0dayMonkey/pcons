@@ -8,12 +8,12 @@ import { ApiService } from './api.service';
 })
 export class ConfigService {
   config: IAppConfig | undefined;
-  private wsPortInternal: string | null = null;
-  private tokenInternal: string | null = null;
-  private langInternal: string | null = null;
-  private siteIdInternal: string | null = null;
-  private locTypInternal: string | null = null;
-  private locIdInternal: string | null = null;
+  private wsPortInternal: string = '';
+  private tokenInternal: string = '';
+  private langInternal: string = '';
+  private siteIdInternal: string = '';
+  private locTypInternal: string = '';
+  private locIdInternal: string = '';
 
   constructor(private http: HttpClient) {}
 
@@ -21,7 +21,7 @@ export class ConfigService {
     if (this.config) {
       return of(this.config);
     }
-    const jsonFile = '../assets/config.json';
+    const jsonFile = './assets/config.json';
     return this.http.get<IAppConfig>(jsonFile).pipe(
       tap((data) => {
         if (data.apiUrl && !data.apiUrl.endsWith('/')) {
@@ -32,51 +32,51 @@ export class ConfigService {
     );
   }
 
-  setWsPort(port: string | null): void {
+  setWsPort(port: string ): void {
     this.wsPortInternal = port;
   }
 
-  getWsPort(): string | null {
+  getWsPort(): string  {
     return this.wsPortInternal;
   }
 
-  setToken(token: string | null): void {
+  setToken(token: string ): void {
     this.tokenInternal = token;
   }
 
-  getToken(): string | null {
+  getToken(): string  {
     return this.tokenInternal;
   }
 
-  setLang(lang: string | null): void {
+  setLang(lang: string ): void {
     this.langInternal = lang;
   }
 
-  getLang(): string | null {
+  getLang(): string  {
     return this.langInternal;
   }
 
-  setSiteId(siteId: string | null): void {
+  setSiteId(siteId: string ): void {
     this.siteIdInternal = siteId;
   }
 
-  setLocTyp(locTyp: string | null): void {
+  setLocTyp(locTyp: string ): void {
     this.locTypInternal = locTyp;
   }
 
-  setLocId(locId: string | null): void {
+  setLocId(locId: string ): void {
     this.locIdInternal = locId;
   }
 
-  getSiteId(): string | null {
+  getSiteId(): string {
     return this.siteIdInternal;
   }
 
-  getLocTyp(): string | null {
+  getLocTyp(): string  {
     return this.locTypInternal;
   }
 
-  getLocId(): string | null {
+  getLocId(): string  {
     return this.locIdInternal;
   }
 }
