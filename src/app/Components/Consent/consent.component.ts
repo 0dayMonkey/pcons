@@ -15,6 +15,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import SignaturePad from 'signature_pad';
 import {
   AppWebSocketService,
+  LogLevel,
   WebSocketMessage,
 } from '../../Services/websocket.service';
 import jsPDF from 'jspdf';
@@ -120,13 +121,38 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     this.rulesText = this.translate.instant('generic.loading');
   }
 
+  private sendLog(level: LogLevel, message: string, error?: any): void {
+    if (this.configService.getLogLevel() >= level) {
+      const levelName = LogLevel[level];
+      let logString = `[LOG][${levelName}] ${message}`;
+
+      if (error) {
+        const errorCode = error.name || 'UNKNOWN_ERROR';
+        const errorMessage = error.message || 'No error message available.';
+        const stack = error.stack ? `\n-- Stack Trace --\n${error.stack}` : '';
+        logString += `\n> Code: ${errorCode}\n> Message: ${errorMessage}${stack}`;
+      }
+      this.webSocketService.sendMessage(logString);
+    }
+  }
+
   ngOnInit(): void {
     this.currentPlayerId = this.route.snapshot.paramMap.get('playerId');
+    this.sendLog(
+      LogLevel.DEBUG,
+      `Consent component initializing for player ID: ${
+        this.currentPlayerId || 'N/A'
+      }`
+    );
     if (!this.currentPlayerId) {
       this.playerPhotoUrl = 'assets/placeholder/placeholder.jpg';
       this.rulesText = this.translate.instant('generic.apiError');
       this.isLoadingInitialData = false;
-      this.handleCriticalError();
+      this.sendLog(
+        LogLevel.ERROR,
+        'Critical error: PlayerId is missing from route parameters.'
+      );
+      this.handleCriticalError('PlayerId missing');
       return;
     }
 
@@ -161,6 +187,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     this.isLoadingInitialData = true;
     this.playerPhotoUrl = 'assets/placeholder/placeholder.jpg';
     this.cdr.detectChanges();
+    this.sendLog(LogLevel.INFO, 'Starting to load initial data.');
 
     this.configService
       .getConfig()
@@ -180,11 +207,16 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
             'Erreur lors du chargement des données initiales',
             error
           );
+          this.sendLog(
+            LogLevel.ERROR,
+            'Erreur lors du chargement des données initiales',
+            error
+          );
           this.rulesText = this.translate.instant('generic.apiError');
           this.playerPhotoUrl = 'assets/placeholder/placeholder.jpg';
           this.isLoadingInitialData = false;
           this.cdr.detectChanges();
-          this.handleCriticalError();
+          this.handleCriticalError('Initial data loading failed');
           return of(null);
         })
       )
@@ -227,7 +259,12 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
                   this.cdr.detectChanges();
                 }
               },
-              error: () => {
+              error: (err) => {
+                this.sendLog(
+                  LogLevel.ERROR,
+                  'Failed to load player picture',
+                  err
+                );
                 this.playerPhotoUrl = 'assets/placeholder/placeholder.jpg';
                 this.cdr.detectChanges();
               },
@@ -248,10 +285,14 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
           this.consentIdToDisplayAndSubmit = newConsentId;
         } else {
           console.error("Impossible d'obtenir un nouvel ID de consentement.");
+          this.sendLog(
+            LogLevel.ERROR,
+            "Impossible d'obtenir un nouvel ID de consentement."
+          );
           this.rulesText = this.translate.instant('generic.apiError');
           this.isLoadingInitialData = false;
           this.cdr.detectChanges();
-          this.handleCriticalError();
+          this.handleCriticalError("Couldn't get new consent ID");
           return;
         }
 
@@ -265,26 +306,32 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
           console.error(
             "Aucune définition de consentement active n'a été trouvée."
           );
+          this.sendLog(
+            LogLevel.ERROR,
+            "Aucune définition de consentement active n'a été trouvée."
+          );
           this.rulesText = this.translate.instant('generic.apiError');
           this.isLoadingInitialData = false;
           this.cdr.detectChanges();
-          this.handleCriticalError();
+          this.handleCriticalError('No active consent definition found');
           return;
         }
         this.isLoadingInitialData = false;
         this.hasReachedBottomOnce = false;
         this.cdr.detectChanges();
+        this.sendLog(LogLevel.INFO, 'Initial data loaded successfully.');
         setTimeout(() => {
           this.checkScroll();
         }, 50);
       });
   }
 
-  private handleCriticalError(): void {
+  private handleCriticalError(reason?: string): void {
     const errorResponse: WebSocketMessage = {
       Action: 'Consent',
       PlayerId: this.currentPlayerId || undefined,
       Status: false,
+      Message: reason,
     };
     this.webSocketService.sendMessage(errorResponse);
     this.router.navigate(['/logo'], { skipLocationChange: true });
@@ -329,6 +376,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.sendLog(LogLevel.DEBUG, 'Consent component being destroyed.');
     if (this.rulesBodyElement) {
       this.rulesBodyElement.removeEventListener(
         'scroll',
@@ -546,12 +594,20 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
       if (!this.consentIdToDisplayAndSubmit)
         message += `\n- ${this.translate.instant('generic.apiError')}`;
 
+      this.sendLog(
+        LogLevel.ERROR,
+        `Submit validation failed: ${message.replace(/\n/g, ' ')}`
+      );
       alert(message);
       return;
     }
 
     this.buttonState = 'loading';
     this.cdr.detectChanges();
+    this.sendLog(
+      LogLevel.INFO,
+      'Submit button clicked, starting consent submission process.'
+    );
 
     try {
       const pdfBlob = await this.generateConsentPdfAsBlob();
@@ -572,6 +628,8 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
 
       if (!locationType || !locationId) {
         console.error('Location Type ou Location ID manquant.');
+        const errorMsg = 'Location Type ou Location ID manquant.';
+        this.sendLog(LogLevel.ERROR, errorMsg);
         alert(this.translate.instant('generic.apiError'));
         this.buttonState = 'idle';
         this.cdr.detectChanges();
@@ -598,10 +656,15 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
         location: location,
       };
 
+      this.sendLog(LogLevel.DEBUG, 'Submitting player consent payload.');
       this.apiService
         .submitPlayerConsent(this.currentPlayerId!, payload)
         .subscribe({
           next: (response) => {
+            this.sendLog(
+              LogLevel.INFO,
+              'Consent submitted successfully to API.'
+            );
             const wsMessage: WebSocketMessage = {
               Action: 'Consent',
               PlayerId: this.currentPlayerId || undefined,
@@ -626,6 +689,11 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
           },
           error: (err) => {
             console.error(this.translate.instant('alert.pdfUploadError'), err);
+            this.sendLog(
+              LogLevel.ERROR,
+              this.translate.instant('alert.pdfUploadError'),
+              err
+            );
             alert(this.translate.instant('alert.pdfUploadErrorDetail'));
             this.buttonState = 'idle';
             this.cdr.detectChanges();
@@ -633,6 +701,11 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
         });
     } catch (error) {
       console.error(this.translate.instant('alert.pdfGenerationError'), error);
+      this.sendLog(
+        LogLevel.ERROR,
+        this.translate.instant('alert.pdfGenerationError'),
+        error
+      );
       alert(this.translate.instant('alert.pdfGenerationError'));
       this.buttonState = 'idle';
       this.cdr.detectChanges();

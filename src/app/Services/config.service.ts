@@ -14,6 +14,7 @@ export class ConfigService {
   private siteIdInternal: string = '';
   private locTypInternal: string = '';
   private locIdInternal: string = '';
+  private logLevelInternal: number = 0;
 
   constructor(private http: HttpClient) {}
 
@@ -28,43 +29,44 @@ export class ConfigService {
           data.apiUrl += '/';
         }
         this.config = data;
+        this.logLevelInternal = data.wslog || 0;
       })
     );
   }
 
-  setWsPort(port: string ): void {
+  setWsPort(port: string): void {
     this.wsPortInternal = port;
   }
 
-  getWsPort(): string  {
+  getWsPort(): string {
     return this.wsPortInternal;
   }
 
-  setToken(token: string ): void {
+  setToken(token: string): void {
     this.tokenInternal = token;
   }
 
-  getToken(): string  {
+  getToken(): string {
     return this.tokenInternal;
   }
 
-  setLang(lang: string ): void {
+  setLang(lang: string): void {
     this.langInternal = lang;
   }
 
-  getLang(): string  {
+  getLang(): string {
     return this.langInternal;
   }
 
-  setSiteId(siteId: string ): void {
+  setSiteId(siteId: string): void {
     this.siteIdInternal = siteId;
   }
 
-  setLocTyp(locTyp: string ): void {
+  setLocTyp(locTyp: string): void {
     this.locTypInternal = locTyp;
   }
 
-  setLocId(locId: string ): void {
+  setLocId(locId: string): void {
     this.locIdInternal = locId;
   }
 
@@ -72,15 +74,20 @@ export class ConfigService {
     return this.siteIdInternal;
   }
 
-  getLocTyp(): string  {
+  getLocTyp(): string {
     return this.locTypInternal;
   }
 
-  getLocId(): string  {
+  getLocId(): string {
     return this.locIdInternal;
+  }
+
+  getLogLevel(): number {
+    return this.logLevelInternal;
   }
 }
 
 export interface IAppConfig {
   apiUrl: string;
+  wslog: number;
 }

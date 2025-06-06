@@ -2,18 +2,27 @@ import { Injectable } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
 import { webSocket, WebSocketSubject } from 'rxjs/webSocket';
 
+export enum LogLevel {
+  ERROR = 1,
+  INFO = 2,
+  DEBUG = 3,
+}
+
 export interface WebSocketMessage {
   Action: string;
   PlayerId?: string;
   Status?: boolean;
+  Message?: string;
+  Error?: any;
+  LogMessage?: string;
 }
 
 @Injectable({
   providedIn: 'root',
 })
 export class AppWebSocketService {
-  private socket$: WebSocketSubject<WebSocketMessage> | undefined;
-  public messages$ = new Subject<WebSocketMessage>();
+  private socket$: WebSocketSubject<any> | undefined;
+  public messages$ = new Subject<any>();
 
   private currentWsUrl: string | undefined;
 
@@ -30,7 +39,7 @@ export class AppWebSocketService {
     }
 
     if (!this.socket$ || this.socket$.closed) {
-      this.socket$ = webSocket<WebSocketMessage>(this.currentWsUrl);
+      this.socket$ = webSocket<any>(this.currentWsUrl);
       this.socket$.subscribe({
         next: (msg) => {
           console.log('Message received from WebSocket: ', msg);
@@ -51,7 +60,7 @@ export class AppWebSocketService {
     }
   }
 
-  public sendMessage(msg: WebSocketMessage): void {
+  public sendMessage(msg: any): void {
     if (this.socket$ && !this.socket$.closed) {
       console.log('Sending message via WebSocket: ', msg);
       this.socket$.next(msg);
