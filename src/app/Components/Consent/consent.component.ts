@@ -23,10 +23,8 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import {
   ApiService,
   ConsentDefinitionResponse,
-  FilterMatchMode,
   LocationRef,
   PlayerConsentPOST,
-  SearchModel,
 } from '../../Services/api.service';
 import { ConfigService } from '../../Services/config.service';
 import { forkJoin, of } from 'rxjs';
@@ -50,9 +48,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   private currentConsentDefinition: ConsentDefinitionResponse | null = null;
   private consentDefinitionIdToSubmit: number = 0;
   private definitionUserIdApi: string | null = null;
-
   rulesText: string = '';
-
   mandatoryCheckbox: boolean = false;
   optionalCheckbox: boolean = false;
   signatureDataUrl: string | null = null;
@@ -83,28 +79,17 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   buttonState: 'idle' | 'loading' | 'success' = 'idle';
   showValidationPopup: boolean = false;
   validationPopupMessage: string = '';
-
-  private get baseCheckboxLabelSizePx(): number {
-    return Math.max(10, Math.min(window.innerWidth * 0.022, 14));
-  }
-  private get defaultConditionsTextSizePx(): number {
-    return this.predefinedTextSizes.medium;
-  }
-
   @ViewChild('signaturePadCanvas')
   signaturePadCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('rulesBody') rulesBody!: ElementRef<HTMLDivElement>;
   @ViewChild('signaturePadWrapper')
   signaturePadWrapper!: ElementRef<HTMLDivElement>;
-
   private signaturePad!: SignaturePad;
   private resizeObserver!: ResizeObserver;
   private navigationTimer: any;
-
   private initialPinchDistance: number = 0;
   private pinchStartFontSize: number = 0;
   private rulesBodyElement: HTMLDivElement | null = null;
-
   isLoadingInitialData: boolean = true;
 
   constructor(
@@ -203,10 +188,6 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
           });
         }),
         catchError((error) => {
-          console.error(
-            'Erreur lors du chargement des données initiales',
-            error
-          );
           this.sendLog(
             LogLevel.ERROR,
             'Erreur lors du chargement des données initiales',
@@ -272,19 +253,11 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
           } else {
             this.playerPhotoUrl = 'assets/placeholder/placeholder.jpg';
           }
-        } else {
-          this.firstName = this.translate.instant('generic.na');
-          this.lastName = this.translate.instant('generic.na');
-          this.birthDate = this.translate.instant('generic.na');
-          this.cardIdNumber =
-            this.currentPlayerId || this.translate.instant('generic.na');
-          this.playerPhotoUrl = 'assets/placeholder/placeholder.jpg';
         }
 
         if (newConsentId) {
           this.consentIdToDisplayAndSubmit = newConsentId;
         } else {
-          console.error("Impossible d'obtenir un nouvel ID de consentement.");
           this.sendLog(
             LogLevel.ERROR,
             "Impossible d'obtenir un nouvel ID de consentement."
@@ -303,9 +276,6 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
           this.definitionUserIdApi =
             this.currentConsentDefinition.userId || null;
         } else {
-          console.error(
-            "Aucune définition de consentement active n'a été trouvée."
-          );
           this.sendLog(
             LogLevel.ERROR,
             "Aucune définition de consentement active n'a été trouvée."
@@ -627,9 +597,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
       const locationId = this.configService.getLocId();
 
       if (!locationType || !locationId) {
-        console.error('Location Type ou Location ID manquant.');
-        const errorMsg = 'Location Type ou Location ID manquant.';
-        this.sendLog(LogLevel.ERROR, errorMsg);
+        this.sendLog(LogLevel.ERROR, 'Location Type ou Location ID manquant.');
         alert(this.translate.instant('generic.apiError'));
         this.buttonState = 'idle';
         this.cdr.detectChanges();
@@ -637,7 +605,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
       }
 
       const location: LocationRef = {
-        type: locationType,
+        locationType: locationType,
         id: locationId,
       };
 
@@ -688,7 +656,6 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
             }, 5000);
           },
           error: (err) => {
-            console.error(this.translate.instant('alert.pdfUploadError'), err);
             this.sendLog(
               LogLevel.ERROR,
               this.translate.instant('alert.pdfUploadError'),
@@ -700,7 +667,6 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
           },
         });
     } catch (error) {
-      console.error(this.translate.instant('alert.pdfGenerationError'), error);
       this.sendLog(
         LogLevel.ERROR,
         this.translate.instant('alert.pdfGenerationError'),
@@ -738,6 +704,87 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
         reject(error);
       };
       reader.readAsDataURL(blob);
+    });
+  }
+
+  private async getResizedSignatureDataUrl(): Promise<string | null> {
+    if (!this.signaturePad || this.signaturePad.isEmpty()) {
+      return null;
+    }
+
+    const DOWNSCALED_WIDTH = 400;
+    const DOWNSCALED_HEIGHT = 150;
+    const PADDING = 10;
+
+    const originalImageDataUrl = this.signaturePad.toDataURL('image/jpeg');
+    const originalImage = new Image();
+    originalImage.src = originalImageDataUrl;
+
+    return new Promise((resolve) => {
+      originalImage.onload = () => {
+        const resampleCanvas = document.createElement('canvas');
+        resampleCanvas.width = DOWNSCALED_WIDTH;
+        resampleCanvas.height = DOWNSCALED_HEIGHT;
+        const ctx = resampleCanvas.getContext('2d');
+
+        if (ctx) {
+          const boundingBox = this.signaturePad.toData().reduce(
+            (acc, { points }) => {
+              points.forEach(({ x, y }) => {
+                acc.minX = Math.min(acc.minX, x);
+                acc.maxX = Math.max(acc.maxX, x);
+                acc.minY = Math.min(acc.minY, y);
+                acc.maxY = Math.max(acc.maxY, y);
+              });
+              return acc;
+            },
+            {
+              minX: Infinity,
+              maxX: -Infinity,
+              minY: Infinity,
+              maxY: -Infinity,
+            }
+          );
+
+          const sigWidth = boundingBox.maxX - boundingBox.minX;
+          const sigHeight = boundingBox.maxY - boundingBox.minY;
+
+          if (sigWidth > 0 && sigHeight > 0) {
+            const sourceX = Math.max(0, boundingBox.minX - PADDING);
+            const sourceY = Math.max(0, boundingBox.minY - PADDING);
+            const sourceWidth = sigWidth + PADDING * 2;
+            const sourceHeight = sigHeight + PADDING * 2;
+
+            const aspectRatio = sourceWidth / sourceHeight;
+            let drawWidth = DOWNSCALED_WIDTH;
+            let drawHeight = drawWidth / aspectRatio;
+
+            if (drawHeight > DOWNSCALED_HEIGHT) {
+              drawHeight = DOWNSCALED_HEIGHT;
+              drawWidth = drawHeight * aspectRatio;
+            }
+
+            const offsetX = (DOWNSCALED_WIDTH - drawWidth) / 2;
+            const offsetY = (DOWNSCALED_HEIGHT - drawHeight) / 2;
+
+            ctx.drawImage(
+              originalImage,
+              sourceX,
+              sourceY,
+              sourceWidth,
+              sourceHeight,
+              offsetX,
+              offsetY,
+              drawWidth,
+              drawHeight
+            );
+          }
+        }
+        resolve(resampleCanvas.toDataURL('image/jpeg'));
+      };
+      originalImage.onerror = () => {
+        resolve(null);
+      };
     });
   }
 
@@ -1130,29 +1177,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     let signatureImgDataForPdf: HTMLImageElement | null = null;
     let signatureImgRenderWidth = 0;
 
-    let signatureImgForPdfDataUrl = this.signatureDataUrl;
-
-    if (this.signaturePad && !this.signaturePad.isEmpty()) {
-      const points = this.signaturePad.toData();
-
-      const tempCanvas = document.createElement('canvas');
-      const originalCanvas = this.signaturePadCanvas.nativeElement;
-      tempCanvas.width = originalCanvas.width;
-      tempCanvas.height = originalCanvas.height;
-
-      const tempSignaturePad = new SignaturePad(tempCanvas, {
-        backgroundColor: 'rgba(0,0,0,0)',
-        penColor: this.signaturePad.penColor,
-        minWidth: this.signaturePad.minWidth,
-        maxWidth: this.signaturePad.maxWidth,
-      });
-      tempSignaturePad.fromData(points);
-
-      if (!tempSignaturePad.isEmpty()) {
-        signatureImgForPdfDataUrl = tempSignaturePad.toDataURL('image/png');
-      }
-      tempSignaturePad.off();
-    }
+    const signatureImgForPdfDataUrl = await this.getResizedSignatureDataUrl();
 
     if (signatureImgForPdfDataUrl) {
       const img = new Image();

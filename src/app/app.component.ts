@@ -7,7 +7,7 @@ import {
   UrlTree,
 } from '@angular/router';
 import { DOCUMENT } from '@angular/common';
-import { Subscription, ReplaySubject, timer } from 'rxjs';
+import { ReplaySubject, timer } from 'rxjs';
 import { filter, takeUntil, tap } from 'rxjs/operators';
 import {
   AppWebSocketService,
@@ -236,7 +236,6 @@ export class AppComponent implements OnInit, OnDestroy {
     const elem = this.document.documentElement;
     if (elem.requestFullscreen) {
       elem.requestFullscreen().catch((err) => {
-        console.warn(`Fullscreen request failed: ${err.message}`);
         if (this.configService.getLogLevel() >= LogLevel.ERROR) {
           const errorMsg = `Fullscreen request failed: ${err.message}`;
           let logString = `[LOG][ERROR] ${errorMsg}`;
