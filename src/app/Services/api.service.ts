@@ -59,8 +59,8 @@ export interface SearchModel {
 }
 
 export interface SearchResult {
-  totalItems: number,
-  items: ConsentDefinitionResponse[],
+  totalItems: number;
+  items: ConsentDefinitionResponse[];
 }
 
 export interface ConsentDefinitionResponse {
@@ -163,16 +163,16 @@ export class ApiService {
     return this.http.get<any>(url, { headers: this.getHeaders() });
   }
 
-  getPlayerPicture(playerId: string): Observable<any> {
+  getPlayerPicture(playerId: string): Observable<Blob> {
     const errorCheck = this.checkApiUrl();
     if (errorCheck) return errorCheck;
 
     const url = `${this.apiUrl}api/web/v1/players/${playerId}/pictures/Default`;
-    return this.http.get<any>(url, { headers: this.getHeaders() });
+    const headers = this.getHeaders(false);
+    return this.http.get(url, { headers: headers, responseType: 'blob' });
   }
 
   getActiveConsentDefinition(): Observable<ConsentDefinitionResponse> {
-
     const searchModelForActiveConsent: SearchModel = {
       first: 0,
       rows: 1,
@@ -190,7 +190,10 @@ export class ApiService {
     const url = `${this.apiUrl}api/web/v1/consent-definitions`;
 
     let params = new HttpParams();
-    params = params.set('searchJson', JSON.stringify(searchModelForActiveConsent));
+    params = params.set(
+      'searchJson',
+      JSON.stringify(searchModelForActiveConsent)
+    );
 
     return this.http
       .get<SearchResult>(url, {
@@ -205,7 +208,7 @@ export class ApiService {
           );
           return throwError(() => err);
         }),
-        map(x => x.items[0])
+        map((x) => x.items[0])
       );
   }
 
@@ -215,7 +218,8 @@ export class ApiService {
 
     const url = `${this.apiUrl}api/web/v1/consents/new-id`;
     return this.http.request('POST', url, {
-      headers: this.getHeaders(false), responseType: 'text'
+      headers: this.getHeaders(false),
+      responseType: 'text',
     });
   }
 
@@ -227,8 +231,8 @@ export class ApiService {
     if (errorCheck) return errorCheck;
 
     const url = `${this.apiUrl}api/web/v1/players/${playerId}/consents`;
-    const header = this.getHeaders();
-    header.append("Site-Origin-ID", this.configService.getSiteId())
-    return this.http.post(url, consentData, { headers: header });
+    let headers = this.getHeaders();
+    headers = headers.append('Site-Origin-ID', this.configService.getSiteId());
+    return this.http.post(url, consentData, { headers: headers });
   }
 }

@@ -44,7 +44,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   lastName: string = '';
   birthDate: string = '';
   cardIdNumber: string = '';
-  playerPhotoUrl: string = '';
+  playerPhotoUrl: string = 'assets/placeholder/placeholder.jpg';
   private currentPlayerId: string | null = null;
   private currentConsentDefinition: ConsentDefinitionResponse | null = null;
   private consentDefinitionIdToSubmit: number = 0;
@@ -56,22 +56,39 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   optionalCheckbox: boolean = false;
   signatureDataUrl: string | null = null;
   hasReachedBottomOnce: boolean = false;
+  private screenWidth: number = window.innerWidth;
+  private resizeListener: any;
 
-  readonly predefinedTextSizes = {
-    small: 14,
-    medium: 18,
-    large: 22,
-  };
+  get predefinedTextSizes() {
+    const baseSize = Math.max(14, Math.min(window.innerWidth * 0.025, 20));
+
+    return {
+      small: Math.round(baseSize * 0.85),
+      medium: Math.round(baseSize),
+      large: Math.round(baseSize * 1.25),
+    };
+  }
+
   currentTextSizeInPx: number = this.predefinedTextSizes.medium;
-  minTextSize: number = 12;
-  maxTextSize: number = 30;
+
+  get minTextSize(): number {
+    return Math.max(10, Math.min(window.innerWidth * 0.02, 14));
+  }
+
+  get maxTextSize(): number {
+    return Math.max(20, Math.min(window.innerWidth * 0.04, 32));
+  }
 
   buttonState: 'idle' | 'loading' | 'success' = 'idle';
   showValidationPopup: boolean = false;
   validationPopupMessage: string = '';
 
-  private baseCheckboxLabelSizePx: number = 12;
-  private defaultConditionsTextSizePx: number = this.predefinedTextSizes.medium;
+  private get baseCheckboxLabelSizePx(): number {
+    return Math.max(10, Math.min(window.innerWidth * 0.022, 14));
+  }
+  private get defaultConditionsTextSizePx(): number {
+    return this.predefinedTextSizes.medium;
+  }
 
   @ViewChild('signaturePadCanvas')
   signaturePadCanvas!: ElementRef<HTMLCanvasElement>;
@@ -99,9 +116,6 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     private configService: ConfigService,
     private cdr: ChangeDetectorRef
   ) {
-    this.playerPhotoUrl = `https://placehold.co/100x100/E0E0E0/757575?text=${this.translate.instant(
-      'generic.loading'
-    )}`;
     this.validationPopupMessage = this.translate.instant('alert.thankYou');
     this.rulesText = this.translate.instant('generic.loading');
   }
@@ -109,9 +123,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   ngOnInit(): void {
     this.currentPlayerId = this.route.snapshot.paramMap.get('playerId');
     if (!this.currentPlayerId) {
-      this.playerPhotoUrl = `https://placehold.co/100x100/FF0000/FFFFFF?text=${this.translate.instant(
-        'generic.error'
-      )}+ID`;
+      this.playerPhotoUrl = 'assets/placeholder/placeholder.jpg';
       this.rulesText = this.translate.instant('generic.apiError');
       this.isLoadingInitialData = false;
       this.handleCriticalError();
@@ -120,10 +132,34 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.loadInitialData();
     this.applyTextSizeChangeSideEffects();
+    this.resizeListener = this.handleResize.bind(this);
+    window.addEventListener('resize', this.resizeListener);
+
+    this.currentTextSizeInPx = this.predefinedTextSizes.medium;
+  }
+
+  private handleResize(): void {
+    this.screenWidth = window.innerWidth;
+    const currentSizeKey = this.getCurrentTextSizeKey();
+    if (currentSizeKey) {
+      this.currentTextSizeInPx = this.predefinedTextSizes[currentSizeKey];
+    } else {
+      this.currentTextSizeInPx = this.predefinedTextSizes.medium;
+    }
+    this.applyTextSizeChangeSideEffects();
+  }
+
+  private getCurrentTextSizeKey(): 'small' | 'medium' | 'large' | null {
+    const sizes = this.predefinedTextSizes;
+    if (Math.abs(this.currentTextSizeInPx - sizes.small) < 1) return 'small';
+    if (Math.abs(this.currentTextSizeInPx - sizes.medium) < 1) return 'medium';
+    if (Math.abs(this.currentTextSizeInPx - sizes.large) < 1) return 'large';
+    return null;
   }
 
   private loadInitialData(): void {
     this.isLoadingInitialData = true;
+    this.playerPhotoUrl = 'assets/placeholder/placeholder.jpg';
     this.cdr.detectChanges();
 
     this.configService
@@ -145,6 +181,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
             error
           );
           this.rulesText = this.translate.instant('generic.apiError');
+          this.playerPhotoUrl = 'assets/placeholder/placeholder.jpg';
           this.isLoadingInitialData = false;
           this.cdr.detectChanges();
           this.handleCriticalError();
@@ -172,12 +209,31 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
             : this.translate.instant('generic.na');
           this.cardIdNumber =
             this.currentPlayerId || this.translate.instant('generic.na');
+
           if (playerData.photoUrl) {
             this.playerPhotoUrl = playerData.photoUrl;
+          } else if (this.currentPlayerId) {
+            this.apiService.getPlayerPicture(this.currentPlayerId).subscribe({
+              next: (imageBlob: Blob) => {
+                if (imageBlob && imageBlob.size > 0) {
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                    this.playerPhotoUrl = reader.result as string;
+                    this.cdr.detectChanges();
+                  };
+                  reader.readAsDataURL(imageBlob);
+                } else {
+                  this.playerPhotoUrl = 'assets/placeholder/placeholder.jpg';
+                  this.cdr.detectChanges();
+                }
+              },
+              error: () => {
+                this.playerPhotoUrl = 'assets/placeholder/placeholder.jpg';
+                this.cdr.detectChanges();
+              },
+            });
           } else {
-            this.playerPhotoUrl = `https://placehold.co/100x100/E0E0E0/757575?text=${this.translate.instant(
-              'generic.na'
-            )}`;
+            this.playerPhotoUrl = 'assets/placeholder/placeholder.jpg';
           }
         } else {
           this.firstName = this.translate.instant('generic.na');
@@ -185,9 +241,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
           this.birthDate = this.translate.instant('generic.na');
           this.cardIdNumber =
             this.currentPlayerId || this.translate.instant('generic.na');
-          this.playerPhotoUrl = `https://placehold.co/100x100/E0E0E0/757575?text=${this.translate.instant(
-            'generic.na'
-          )}`;
+          this.playerPhotoUrl = 'assets/placeholder/placeholder.jpg';
         }
 
         if (newConsentId) {
@@ -305,6 +359,9 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     if (this.navigationTimer) {
       clearTimeout(this.navigationTimer);
+    }
+    if (this.resizeListener) {
+      window.removeEventListener('resize', this.resizeListener);
     }
   }
 
@@ -446,11 +503,17 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   getScaledCheckboxLabelSize(): number {
+    const viewportWidth = window.innerWidth;
+    const baseSize = Math.max(10, Math.min(viewportWidth * 0.022, 14));
     const scaleFactor =
-      this.currentTextSizeInPx / this.defaultConditionsTextSizePx;
-    let scaledSize = this.baseCheckboxLabelSizePx * scaleFactor;
-    scaledSize = Math.max(10, Math.min(scaledSize, 22));
-    return scaledSize;
+      this.currentTextSizeInPx / this.predefinedTextSizes.medium;
+    let scaledSize = baseSize * scaleFactor;
+
+    const minSize = Math.max(9, Math.min(viewportWidth * 0.018, 12));
+    const maxSize = Math.max(16, Math.min(viewportWidth * 0.035, 24));
+
+    scaledSize = Math.max(minSize, Math.min(scaledSize, maxSize));
+    return Math.round(scaledSize);
   }
 
   isSubmitEnabled(): boolean {
@@ -588,6 +651,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     this.consentIdToDisplayAndSubmit = '';
     this.currentConsentDefinition = null;
     this.isLoadingInitialData = true;
+    this.playerPhotoUrl = 'assets/placeholder/placeholder.jpg';
   }
 
   private blobToBase64(blob: Blob): Promise<string> {
@@ -699,7 +763,10 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     const photoFinalY = textBlockStartY - photoAdjustmentUpwards;
     const photoX = margin + playerInfoTextWidth + gapBetweenTextAndPhoto;
 
-    if (this.playerPhotoUrl && !this.playerPhotoUrl.includes('placehold.co')) {
+    if (
+      this.playerPhotoUrl &&
+      this.playerPhotoUrl !== 'assets/placeholder/placeholder.jpg'
+    ) {
       const img = new Image();
       img.crossOrigin = 'Anonymous';
       img.src = this.playerPhotoUrl;
@@ -708,7 +775,12 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
           img.onload = () => {
             doc.addImage(
               img,
-              'PNG',
+              img.src.startsWith('data:image/png') ||
+                img.src.startsWith('data:image/jpeg')
+                ? img.src.startsWith('data:image/png')
+                  ? 'PNG'
+                  : 'JPEG'
+                : 'PNG',
               photoX,
               photoFinalY,
               photoWidth,
