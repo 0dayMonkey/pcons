@@ -6,6 +6,7 @@ import {
   LocationRef,
   PlayerConsentPOST,
   PlayerData,
+  SiteResponse,
 } from './api.service';
 import {
   AppWebSocketService,
@@ -22,6 +23,8 @@ export interface InitialData {
   playerData: PlayerData | null;
   newConsentId: string;
   consentDefinitions: ConsentDefinitionResponse;
+  siteInfo: SiteResponse;
+  siteLogoBase64: string | null;
 }
 
 export interface SubmissionData {
@@ -53,16 +56,37 @@ export class ConsentOrchestrationService {
     private loggingService: LoggingService
   ) {}
 
-  public loadInitialData(playerId: string): Observable<InitialData | null> {
+  public loadInitialData(
+    playerId: string,
+    siteId: number
+  ): Observable<InitialData | null> {
     this.loggingService.log(LogLevel.INFO, 'Starting to load initial data.');
-    return this.configService.getConfig().pipe(
-      first(),
-      switchMap(() => {
+    return this.apiService.getSite(siteId).pipe(
+      switchMap((siteInfo) => {
+        const playerData$ = this.apiService.getPlayerData(playerId);
+        const newConsentId$ = this.apiService.getNewConsentId();
+        const consentDefinitions$ =
+          this.apiService.getActiveConsentDefinition();
+        const logo$ = siteInfo.casinoId
+          ? this.apiService
+              .getSiteLogo(siteInfo.casinoId)
+              .pipe(map((logoResponse) => logoResponse.logoBase64))
+          : of(null);
+
         return forkJoin({
-          playerData: this.apiService.getPlayerData(playerId),
-          newConsentId: this.apiService.getNewConsentId(),
-          consentDefinitions: this.apiService.getActiveConsentDefinition(),
-        });
+          playerData: playerData$,
+          newConsentId: newConsentId$,
+          consentDefinitions: consentDefinitions$,
+          logo: logo$,
+        }).pipe(
+          map(({ playerData, newConsentId, consentDefinitions, logo }) => ({
+            playerData,
+            newConsentId,
+            consentDefinitions,
+            siteInfo: siteInfo,
+            siteLogoBase64: logo,
+          }))
+        );
       }),
       catchError((error) => {
         this.loggingService.log(

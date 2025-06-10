@@ -99,6 +99,26 @@ export interface PlayerData {
   photoUrl?: string;
 }
 
+export interface SiteResponse {
+  companyId: string;
+  establishmentId: string;
+  casinoId: number;
+  establishmentName: string;
+  shortLabel: string;
+  direction: string;
+  languageId: string;
+  minimumAge: number;
+  lastUpdatedTimestamp?: Date;
+  cashlessMode: any;
+  masterCasino?: number;
+  isOverMinimumAge: boolean;
+  userId?: string;
+}
+
+export interface SiteLogoResponse {
+  logoBase64: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -239,5 +259,19 @@ export class ApiService {
     let headers = this.getHeaders();
     headers = headers.append('Site-Origin-ID', this.configService.getSiteId());
     return this.http.post(url, consentData, { headers: headers });
+  }
+
+  getSite(siteId: number): Observable<SiteResponse> {
+    const errorCheck = this.checkApiUrl();
+    if (errorCheck) return errorCheck;
+    const url = `${this.apiUrl}api/web/setup/v1/sites/${siteId}`;
+    return this.http.get<SiteResponse>(url, { headers: this.getHeaders() });
+  }
+
+  getSiteLogo(casinoId: number): Observable<SiteLogoResponse> {
+    const errorCheck = this.checkApiUrl();
+    if (errorCheck) return errorCheck;
+    const url = `${this.apiUrl}api/web/setup/v1/sites/${casinoId}/logo`;
+    return this.http.get<SiteLogoResponse>(url, { headers: this.getHeaders() });
   }
 }

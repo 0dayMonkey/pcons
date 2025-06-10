@@ -124,20 +124,26 @@
   line-height: 1.4;
 }
 
-.player-info-header .player-photo {
-  width: clamp(50px, 8vw, 80px);
-  //height: clamp(45px, 8vw, 80px);
+/* MODIFICATION ICI : Ancien style .player-photo remplacé par ces deux nouveaux styles */
+.player-info-header .casino-logo-display,
+.player-info-header .casino-logo-placeholder {
+  width: clamp(60px, 10vw, 150px);
   aspect-ratio: 1/1;
   border-radius: 0.5rem;
-  object-fit: cover;
   border: 2px solid #e5e7eb;
   flex-shrink: 0;
   align-self: center;
+  background-color: #ffffff; /* Fond blanc pour les logos avec transparence */
 
   @media (min-width: 1024px) {
-    width: clamp(60px, 10vw, 200px);
-    // height: clamp(60px, 10vw, 100px);
+    width: clamp(80px, 12vw, 220px);
   }
+}
+
+.player-info-header .casino-logo-display {
+  object-fit: contain; /* ESSENTIEL: Affiche tout le logo sans le couper */
+  padding: 5px; /* Marge intérieure pour que le logo respire */
+  box-sizing: border-box;
 }
 
 .conditions-section {

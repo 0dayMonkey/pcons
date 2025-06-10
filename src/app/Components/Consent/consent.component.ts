@@ -14,12 +14,14 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import {
   ConsentOrchestrationService,
+  InitialData,
   SubmissionData,
 } from '../../Services/consent-orchestration.service';
 import { ConsentDefinitionResponse } from '../../Services/api.service';
 import { SignaturePadService } from '../../Services/signature-pad.service';
 import { LoggingService } from '../../Services/logging.service';
 import { LogLevel } from '../../Services/websocket.service';
+import { ConfigService } from '../../Services/config.service';
 
 @Component({
   selector: 'app-consent',
@@ -45,8 +47,8 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   hasReachedBottomOnce: boolean = false;
   private screenWidth: number = window.innerWidth;
   private resizeListener: any;
-  casinoName: string = 'Golden Palace';
-  casinoLogoUrl: string | null = '/assets/logo_gp.png';
+  casinoName: string = '';
+  casinoLogoUrl: string | null = null;
 
   get predefinedTextSizes() {
     const baseSize = Math.max(14, Math.min(window.innerWidth * 0.025, 30));
@@ -89,7 +91,8 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     private cdr: ChangeDetectorRef,
     private signaturePadService: SignaturePadService,
     private orchestrationService: ConsentOrchestrationService,
-    private loggingService: LoggingService
+    private loggingService: LoggingService,
+    private configService: ConfigService
   ) {
     this.validationPopupMessage = this.translate.instant('alert.thankYou');
     this.rulesText = this.translate.instant('generic.loading');
@@ -97,25 +100,29 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnInit(): void {
     this.currentPlayerId = this.route.snapshot.paramMap.get('playerId');
+    const siteId = this.configService.getSiteId();
+
     this.loggingService.log(
       LogLevel.DEBUG,
       `Consent component initializing for player ID: ${
         this.currentPlayerId || 'N/A'
       }`
     );
-    if (!this.currentPlayerId) {
+    if (!this.currentPlayerId || !siteId) {
       this.playerPhotoUrl = 'assets/placeholder/placeholder.jpg';
       this.rulesText = this.translate.instant('generic.apiError');
       this.isLoadingInitialData = false;
       this.loggingService.log(
         LogLevel.ERROR,
-        'Critical error: PlayerId is missing from route parameters.'
+        'Critical error: PlayerId or SiteId is missing from route parameters.'
       );
-      this.orchestrationService.handleCriticalError('PlayerId missing');
+      this.orchestrationService.handleCriticalError(
+        'PlayerId or SiteId missing'
+      );
       return;
     }
 
-    this.loadInitialData(this.currentPlayerId);
+    this.loadInitialData(this.currentPlayerId, siteId);
     this.applyTextSizeChangeSideEffects();
     this.resizeListener = this.handleResize.bind(this);
     window.addEventListener('resize', this.resizeListener);
@@ -142,63 +149,76 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     return null;
   }
 
-  private loadInitialData(playerId: string): void {
+  private loadInitialData(playerId: string, siteId: string): void {
     this.isLoadingInitialData = true;
     this.playerPhotoUrl = 'assets/placeholder/placeholder.jpg';
     this.cdr.detectChanges();
 
-    this.orchestrationService.loadInitialData(playerId).subscribe({
-      next: (results) => {
-        if (!results) {
+    this.orchestrationService
+      .loadInitialData(playerId, Number(siteId))
+      .subscribe({
+        next: (results) => {
+          if (!results) {
+            this.rulesText = this.translate.instant('generic.apiError');
+            this.isLoadingInitialData = false;
+            this.cdr.detectChanges();
+            return;
+          }
+
+          this.processInitialData(results);
+        },
+        error: () => {
           this.rulesText = this.translate.instant('generic.apiError');
           this.isLoadingInitialData = false;
           this.cdr.detectChanges();
-          return;
-        }
+        },
+      });
+  }
 
-        const { playerData, newConsentId, consentDefinitions } = results;
+  private processInitialData(data: InitialData): void {
+    const {
+      playerData,
+      newConsentId,
+      consentDefinitions,
+      siteInfo,
+      siteLogoBase64,
+    } = data;
 
-        if (playerData) {
-          this.firstName =
-            playerData.firstName || this.translate.instant('generic.na');
-          this.lastName =
-            playerData.lastName || this.translate.instant('generic.na');
-          this.cardIdNumber = playerId;
+    if (playerData) {
+      this.firstName =
+        playerData.firstName || this.translate.instant('generic.na');
+      this.lastName =
+        playerData.lastName || this.translate.instant('generic.na');
+      this.cardIdNumber = this.currentPlayerId!;
 
-          if (playerData.photoUrl) {
-            this.playerPhotoUrl = playerData.photoUrl;
-          } else {
-            this.orchestrationService
-              .loadPlayerPicture(playerId)
-              .subscribe((url) => {
-                this.playerPhotoUrl =
-                  url || 'assets/placeholder/placeholder.jpg';
-                this.cdr.detectChanges();
-              });
-          }
-        }
+      if (playerData.photoUrl) {
+        this.playerPhotoUrl = playerData.photoUrl;
+      } else {
+        this.orchestrationService
+          .loadPlayerPicture(this.currentPlayerId!)
+          .subscribe((url) => {
+            this.playerPhotoUrl = url || 'assets/placeholder/placeholder.jpg';
+            this.cdr.detectChanges();
+          });
+      }
+    }
 
-        this.consentIdToDisplayAndSubmit = newConsentId;
-        this.currentConsentDefinition = consentDefinitions;
-        this.rulesText = consentDefinitions.text;
-        this.consentDefinitionIdToSubmit = consentDefinitions.id;
-        this.definitionUserIdApi = consentDefinitions.userId || null;
+    this.casinoName = siteInfo.establishmentName;
+    if (siteLogoBase64) {
+      this.casinoLogoUrl = `data:image/png;base64,${siteLogoBase64}`;
+    }
 
-        this.isLoadingInitialData = false;
-        this.hasReachedBottomOnce = false;
-        this.cdr.detectChanges();
-        this.loggingService.log(
-          LogLevel.INFO,
-          'Initial data loaded successfully.'
-        );
-        setTimeout(() => this.checkScroll(), 50);
-      },
-      error: () => {
-        this.rulesText = this.translate.instant('generic.apiError');
-        this.isLoadingInitialData = false;
-        this.cdr.detectChanges();
-      },
-    });
+    this.consentIdToDisplayAndSubmit = newConsentId;
+    this.currentConsentDefinition = consentDefinitions;
+    this.rulesText = consentDefinitions.text;
+    this.consentDefinitionIdToSubmit = consentDefinitions.id;
+    this.definitionUserIdApi = consentDefinitions.userId || null;
+
+    this.isLoadingInitialData = false;
+    this.hasReachedBottomOnce = false;
+    this.cdr.detectChanges();
+    this.loggingService.log(LogLevel.INFO, 'Initial data loaded successfully.');
+    setTimeout(() => this.checkScroll(), 50);
   }
 
   ngAfterViewInit(): void {
@@ -493,5 +513,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     this.currentConsentDefinition = null;
     this.isLoadingInitialData = true;
     this.playerPhotoUrl = 'assets/placeholder/placeholder.jpg';
+    this.casinoName = '';
+    this.casinoLogoUrl = null;
   }
 }

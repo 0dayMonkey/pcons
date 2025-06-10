@@ -1,6 +1,8 @@
 <div class="consent-container">
   <header class="player-info-header">
-    <img [src]="playerPhotoUrl" alt="Photo du Joueur" class="player-photo">
+    <img [src]="casinoLogoUrl" alt="Logo du Casino" class="casino-logo-display" *ngIf="casinoLogoUrl"/>
+    <div class="casino-logo-placeholder" *ngIf="!casinoLogoUrl"></div>
+
     <div class="player-details">
       <h2>{{ 'consent.playerInfoTitle' | translate }}</h2>
       <div class="player-info-two-line-aligned-layout">
