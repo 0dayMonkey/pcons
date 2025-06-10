@@ -32,7 +32,7 @@
       "consentIdLabel": "ID du consentement :",
       "pagePrefixLabel": "Page ",
       "pageSeparatorLabel": " sur ",
-      "identityDocumentLabel": "Document d'identité :",
+      "identityDocumentLabel": "Document d'identité ",
     "logoPlaceholder": "Logo"
     }
   },

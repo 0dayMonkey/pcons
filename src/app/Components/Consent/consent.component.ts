@@ -41,7 +41,6 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   consentIdToDisplayAndSubmit: string = '';
   firstName: string = '';
   lastName: string = '';
-  birthDate: string = '';
   cardIdNumber: string = '';
   playerPhotoUrl: string = 'assets/placeholder/placeholder.jpg';
   private currentPlayerId: string | null = null;
@@ -55,16 +54,16 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   hasReachedBottomOnce: boolean = false;
   private screenWidth: number = window.innerWidth;
   private resizeListener: any;
-  casinoName: string = 'Golden Palace'; //remplacer par getcasinoname
-  casinoLogoUrl: string | null = '/assets/logo_gp.png'; //remplacer par getcasinologo
+  casinoName: string = 'Golden Palace';
+  casinoLogoUrl: string | null = '/assets/logo_gp.png';
 
   get predefinedTextSizes() {
-    const baseSize = Math.max(14, Math.min(window.innerWidth * 0.025, 20));
+    const baseSize = Math.max(14, Math.min(window.innerWidth * 0.025, 30));
 
     return {
-      small: Math.round(baseSize * 0.85),
-      medium: Math.round(baseSize),
-      large: Math.round(baseSize * 1.25),
+      small: Math.round(baseSize * 1),
+      medium: Math.round(baseSize * 1.5),
+      large: Math.round(baseSize * 2),
     };
   }
 
@@ -75,7 +74,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   get maxTextSize(): number {
-    return Math.max(20, Math.min(window.innerWidth * 0.04, 32));
+    return Math.max(20, Math.min(window.innerWidth * 0.04, 65));
   }
 
   buttonState: 'idle' | 'loading' | 'success' = 'idle';
@@ -162,7 +161,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     this.applyTextSizeChangeSideEffects();
   }
 
-  private getCurrentTextSizeKey(): 'small' | 'medium' | 'large' | null {
+  public getCurrentTextSizeKey(): 'small' | 'medium' | 'large' | null {
     const sizes = this.predefinedTextSizes;
     if (Math.abs(this.currentTextSizeInPx - sizes.small) < 1) return 'small';
     if (Math.abs(this.currentTextSizeInPx - sizes.medium) < 1) return 'medium';
@@ -217,11 +216,6 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
             playerData.firstName || this.translate.instant('generic.na');
           this.lastName =
             playerData.lastName || this.translate.instant('generic.na');
-          this.birthDate = playerData.birthDate
-            ? new Date(playerData.birthDate).toLocaleDateString(
-                this.translate.currentLang || 'fr-FR'
-              )
-            : this.translate.instant('generic.na');
           this.cardIdNumber =
             this.currentPlayerId || this.translate.instant('generic.na');
 
@@ -524,13 +518,13 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
 
   getScaledCheckboxLabelSize(): number {
     const viewportWidth = window.innerWidth;
-    const baseSize = Math.max(10, Math.min(viewportWidth * 0.022, 14));
+    const baseSize = Math.max(12, Math.min(viewportWidth * 0.025, 30));
     const scaleFactor =
       this.currentTextSizeInPx / this.predefinedTextSizes.medium;
     let scaledSize = baseSize * scaleFactor;
 
-    const minSize = Math.max(9, Math.min(viewportWidth * 0.018, 12));
-    const maxSize = Math.max(16, Math.min(viewportWidth * 0.035, 24));
+    const minSize = Math.max(10, Math.min(viewportWidth * 0.04, 20));
+    const maxSize = Math.max(20, Math.min(viewportWidth * 0.08, 35));
 
     scaledSize = Math.max(minSize, Math.min(scaledSize, maxSize));
     return Math.round(scaledSize);
@@ -870,7 +864,6 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
       }
     };
 
-    // --- Section En-tête ---
     const logoWidth = 35;
     const logoHeight = 35;
     const logoX = margin;
@@ -1026,7 +1019,6 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     doc.setLineWidth(0.3);
     doc.line(margin, separatorLineY, pageWidth - margin, separatorLineY);
     currentY = separatorLineY + 8;
-    // --- Fin Section En-tête ---
 
     addPageIfNeeded(10);
     doc.setFontSize(9).setTextColor(0, 0, 0).setFont('helvetica', 'normal');
@@ -1038,7 +1030,6 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     currentY += 10;
 
-    // --- Accords donnés ---
     addPageIfNeeded(30);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
@@ -1064,7 +1055,6 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     let tempY =
       checkboxSectionY + checkboxSize / 2 - checkboxLineHeight / 2 + 1.5;
 
-    // Mandatory Checkbox
     addPageIfNeeded(checkboxSize + checkboxLineHeight * 2);
     doc.setDrawColor(0, 0, 0);
     doc.setLineWidth(0.3);
@@ -1155,7 +1145,6 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
 
     checkboxSectionY = tempY + checkboxLineHeight;
 
-    // Optional Checkbox
     tempY = checkboxSectionY + checkboxSize / 2 - checkboxLineHeight / 2 + 1.5;
     addPageIfNeeded(checkboxSize + checkboxLineHeight * 2);
     doc.setDrawColor(0, 0, 0);
@@ -1211,7 +1200,6 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
     checkboxSectionY = tempY + checkboxLineHeight;
     currentY = checkboxSectionY + 7;
-    // --- Fin Accords donnés ---
 
     addPageIfNeeded(40);
     doc.setFont('helvetica', 'bold').setFontSize(14);
