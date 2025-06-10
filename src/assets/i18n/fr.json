@@ -8,7 +8,7 @@
     "consentLabel": "Consentement",
     "consentDeclarationText": " Vous déclarez avoir pris connaissance de ce qui précède et vous donnez votre consentement, dans la mesure nécessaire, au contenu de ce paragraphe.",
     "optionalCommunicationsLabelBold": "Communications:",
-    "optionalCommunicationsLabelText": "       Vous souhaitez être tenus informés des activités commerciales et sociales de l’Exploitant par voie de communications électroniques (SMS, e-mail, réseaux sociaux...). Vous aurez la possibilité de vous désinscrire à tout moment",
+    "optionalCommunicationsLabelText": " Vous souhaitez être tenus informés des activités commerciales et sociales de l’Exploitant par voie de communications électroniques (SMS, e-mail, réseaux sociaux...). Vous aurez la possibilité de vous désinscrire à tout moment",
     "signatureLabel": "Signature Manuscrite",
     "clearButton": "Effacer",
     "validateButton": {
@@ -31,7 +31,9 @@
       "validUntilLabel": "Valide jusqu'au :",
       "consentIdLabel": "ID du consentement :",
       "pagePrefixLabel": "Page ",
-      "pageSeparatorLabel": " sur "
+      "pageSeparatorLabel": " sur ",
+      "identityDocumentLabel": "Document d'identité :",
+    "logoPlaceholder": "Logo"
     }
   },
   "alert": {

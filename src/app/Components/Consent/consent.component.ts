@@ -55,6 +55,8 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   hasReachedBottomOnce: boolean = false;
   private screenWidth: number = window.innerWidth;
   private resizeListener: any;
+  casinoName: string = 'Golden Palace';
+  casinoLogoUrl: string | null = '/assets/logo_gp.png';
 
   get predefinedTextSizes() {
     const baseSize = Math.max(14, Math.min(window.innerWidth * 0.025, 20));
@@ -712,22 +714,39 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
       return null;
     }
 
+    const points = this.signaturePad.toData();
+
+    const tempTransparentCanvas = document.createElement('canvas');
+    const originalCanvas = this.signaturePadCanvas.nativeElement;
+    tempTransparentCanvas.width = originalCanvas.width;
+    tempTransparentCanvas.height = originalCanvas.height;
+
+    const tempSignaturePad = new SignaturePad(tempTransparentCanvas, {
+      backgroundColor: 'rgba(0,0,0,0)',
+      penColor: 'rgb(0, 0, 0)',
+    });
+    tempSignaturePad.fromData(points);
+    const transparentImageDataUrl = tempSignaturePad.toDataURL('image/png');
+    tempSignaturePad.off();
+
     const DOWNSCALED_WIDTH = 400;
     const DOWNSCALED_HEIGHT = 150;
     const PADDING = 10;
 
-    const originalImageDataUrl = this.signaturePad.toDataURL('image/jpeg');
-    const originalImage = new Image();
-    originalImage.src = originalImageDataUrl;
+    const imageWithStrokesOnly = new Image();
+    imageWithStrokesOnly.src = transparentImageDataUrl;
 
     return new Promise((resolve) => {
-      originalImage.onload = () => {
-        const resampleCanvas = document.createElement('canvas');
-        resampleCanvas.width = DOWNSCALED_WIDTH;
-        resampleCanvas.height = DOWNSCALED_HEIGHT;
-        const ctx = resampleCanvas.getContext('2d');
+      imageWithStrokesOnly.onload = () => {
+        const finalCanvas = document.createElement('canvas');
+        finalCanvas.width = DOWNSCALED_WIDTH;
+        finalCanvas.height = DOWNSCALED_HEIGHT;
+        const ctx = finalCanvas.getContext('2d');
 
         if (ctx) {
+          ctx.fillStyle = 'white';
+          ctx.fillRect(0, 0, DOWNSCALED_WIDTH, DOWNSCALED_HEIGHT);
+
           const boundingBox = this.signaturePad.toData().reduce(
             (acc, { points }) => {
               points.forEach(({ x, y }) => {
@@ -768,7 +787,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
             const offsetY = (DOWNSCALED_HEIGHT - drawHeight) / 2;
 
             ctx.drawImage(
-              originalImage,
+              imageWithStrokesOnly,
               sourceX,
               sourceY,
               sourceWidth,
@@ -780,15 +799,49 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
             );
           }
         }
-        resolve(resampleCanvas.toDataURL('image/jpeg'));
+        resolve(finalCanvas.toDataURL('image/png'));
       };
-      originalImage.onerror = () => {
+      imageWithStrokesOnly.onerror = () => {
         resolve(null);
       };
     });
   }
 
-  private async generateConsentPdfAsBlob(): Promise<Blob> {
+  private async getSignatureWithWhiteBackground(
+    originalDataUrl: string | null
+  ): Promise<string | null> {
+    if (!originalDataUrl) {
+      return null;
+    }
+
+    return new Promise((resolve) => {
+      const image = new Image();
+      image.crossOrigin = 'Anonymous';
+      image.src = originalDataUrl;
+
+      image.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const ctx = canvas.getContext('2d');
+
+        if (ctx) {
+          ctx.fillStyle = 'white';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(image, 0, 0);
+          resolve(canvas.toDataURL('image/png'));
+        } else {
+          resolve(null);
+        }
+      };
+
+      image.onerror = () => {
+        resolve(null);
+      };
+    });
+  }
+
+  async generateConsentPdfAsBlob(): Promise<Blob> {
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -808,535 +861,321 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
       }
     };
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(20);
-    doc.setTextColor(0, 0, 0);
-    doc.text(this.translate.instant('consent.pdf.title'), margin, currentY);
-    currentY += 12;
+    const lastName = this.lastName || 'N/A';
+    const firstName = this.firstName || 'N/A';
+    const identityDocument = `${this.cardIdNumber}`;
+    const rulesText = this.currentConsentDefinition?.text ?? 'N/A';
+    const consentYearsDuration =
+      this.currentConsentDefinition?.consentYearsDuration ?? 1;
+    const consentVersion = this.currentConsentDefinition?.version ?? 'N/A';
 
-    const photoWidth = 30;
-    const photoHeight = 30;
-    const textBlockStartY = currentY;
-    let playerDetailsY = textBlockStartY;
+    const logoContainerWidth = 40;
+    const logoContainerHeight = 40;
+    const logoX = margin;
+    let headerSectionStartY = currentY;
 
-    const gapBetweenTextAndPhoto = 5;
-    const playerInfoTextWidth =
-      contentWidth - photoWidth - gapBetweenTextAndPhoto;
-    const lineHeightForPlayerInfo = 7;
-
-    doc.setFontSize(10);
-    doc.setTextColor(0, 0, 0);
-
-    const labelCol1X = margin;
-    const valueCol1X = margin + 35;
-    const labelCol2X = margin + playerInfoTextWidth / 2 + 2;
-    const valueCol2X = labelCol2X + 20;
-
-    doc.setFont('helvetica', 'bold');
-    doc.text(
-      this.translate.instant('consent.pdf.lastNameLabel'),
-      labelCol1X,
-      playerDetailsY
+    doc.setFillColor(255, 255, 255);
+    doc.rect(
+      logoX,
+      headerSectionStartY,
+      logoContainerWidth,
+      logoContainerHeight,
+      'F'
     );
-    doc.setFont('helvetica', 'normal');
-    doc.text(this.lastName, valueCol1X, playerDetailsY, {
-      maxWidth: playerInfoTextWidth / 2 - 37,
-    });
 
-    doc.setFont('helvetica', 'bold');
-    doc.text(
-      this.translate.instant('consent.pdf.firstNameLabel'),
-      labelCol2X,
-      playerDetailsY
-    );
-    doc.setFont('helvetica', 'normal');
-    doc.text(this.firstName, valueCol2X, playerDetailsY, {
-      maxWidth: playerInfoTextWidth / 2 - 22,
-    });
-    playerDetailsY += lineHeightForPlayerInfo;
-
-    doc.setFont('helvetica', 'bold');
-    doc.text(
-      this.translate.instant('consent.pdf.birthDateLabel'),
-      labelCol1X,
-      playerDetailsY
-    );
-    doc.setFont('helvetica', 'normal');
-    doc.text(this.birthDate, valueCol1X, playerDetailsY, {
-      maxWidth: playerInfoTextWidth / 2 - 37,
-    });
-
-    doc.setFont('helvetica', 'bold');
-    doc.text(
-      this.translate.instant('consent.pdf.playerIDLabel'),
-      labelCol2X,
-      playerDetailsY
-    );
-    doc.setFont('helvetica', 'normal');
-    doc.text(this.cardIdNumber, valueCol2X, playerDetailsY, {
-      maxWidth: playerInfoTextWidth / 2 - 22,
-    });
-
-    const textBlockActualHeight =
-      playerDetailsY - textBlockStartY + lineHeightForPlayerInfo / 2;
-    const photoAdjustmentUpwards = 15;
-    const photoFinalY = textBlockStartY - photoAdjustmentUpwards;
-    const photoX = margin + playerInfoTextWidth + gapBetweenTextAndPhoto;
-
-    if (
-      this.playerPhotoUrl &&
-      this.playerPhotoUrl !== 'assets/placeholder/placeholder.jpg'
-    ) {
-      const img = new Image();
-      img.crossOrigin = 'Anonymous';
-      img.src = this.playerPhotoUrl;
+    if (this.casinoLogoUrl) {
       try {
-        await new Promise<void>((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'Anonymous';
+        img.src = this.casinoLogoUrl;
+        await new Promise<void>((resolve) => {
           img.onload = () => {
-            doc.addImage(
-              img,
-              img.src.startsWith('data:image/png') ||
-                img.src.startsWith('data:image/jpeg')
-                ? img.src.startsWith('data:image/png')
-                  ? 'PNG'
-                  : 'JPEG'
-                : 'PNG',
-              photoX,
-              photoFinalY,
-              photoWidth,
-              photoHeight
-            );
+            const imgAspectRatio = img.width / img.height;
+            const containerAspectRatio =
+              logoContainerWidth / logoContainerHeight;
+            let drawWidth = logoContainerWidth;
+            let drawHeight = logoContainerHeight;
+
+            if (imgAspectRatio > containerAspectRatio) {
+              drawHeight = drawWidth / imgAspectRatio;
+            } else {
+              drawWidth = drawHeight * imgAspectRatio;
+            }
+
+            const offsetX = logoX + (logoContainerWidth - drawWidth) / 2;
+            const offsetY =
+              headerSectionStartY + (logoContainerHeight - drawHeight) / 2;
+
+            const format = this.casinoLogoUrl!.toLowerCase().includes('jpeg')
+              ? 'JPEG'
+              : 'PNG';
+            doc.addImage(img, format, offsetX, offsetY, drawWidth, drawHeight);
             resolve();
           };
           img.onerror = () => {
-            doc.setFillColor(220, 220, 220);
-            doc.rect(photoX, photoFinalY, photoWidth, photoHeight, 'F');
-            doc.setFontSize(8);
-            doc.setTextColor(150, 150, 150);
+            doc.setFillColor(230, 230, 230);
+            doc.rect(
+              logoX,
+              headerSectionStartY,
+              logoContainerWidth,
+              logoContainerHeight,
+              'F'
+            );
+            doc.setFontSize(8).setTextColor(150, 150, 150);
             doc.text(
-              this.translate.instant('consent.pdf.photoPlaceholder'),
-              photoX + photoWidth / 2,
-              photoFinalY + photoHeight / 2,
+              this.translate.instant('consent.pdf.logoPlaceholder'),
+              logoX + logoContainerWidth / 2,
+              headerSectionStartY + logoContainerHeight / 2,
               { align: 'center', baseline: 'middle' }
             );
             resolve();
           };
         });
-      } catch (e) {
-        doc.setFillColor(220, 220, 220);
-        doc.rect(photoX, photoFinalY, photoWidth, photoHeight, 'F');
-        doc.setFontSize(8);
-        doc.setTextColor(150, 150, 150);
-        doc.text(
-          this.translate.instant('consent.pdf.photoPlaceholder'),
-          photoX + photoWidth / 2,
-          photoFinalY + photoHeight / 2,
-          { align: 'center', baseline: 'middle' }
-        );
-      }
-    } else {
-      doc.setFillColor(220, 220, 220);
-      doc.rect(photoX, photoFinalY, photoWidth, photoHeight, 'F');
-      doc.setFontSize(8);
-      doc.setTextColor(150, 150, 150);
-      doc.text(
-        this.translate.instant('consent.pdf.photoPlaceholder'),
-        photoX + photoWidth / 2,
-        photoFinalY + photoHeight / 2,
-        { align: 'center', baseline: 'middle' }
-      );
+      } catch (e) {}
     }
 
+    const titleTextX = logoX + logoContainerWidth + 5;
+    doc.setFont('helvetica', 'bold').setFontSize(18).setTextColor(0, 0, 0);
+    const titleText = this.translate.instant('consent.pdf.title');
+    doc.text(titleText, titleTextX, headerSectionStartY + 5);
+    const titleDimensions = doc.getTextDimensions(titleText);
+
+    const casinoNameTextY = headerSectionStartY + 5 + titleDimensions.h + 2;
+    doc.setFont('helvetica', 'normal').setFontSize(11).setTextColor(80, 80, 80);
+    doc.text(this.casinoName, titleTextX, casinoNameTextY);
+
     currentY =
-      Math.max(
-        textBlockStartY + textBlockActualHeight,
-        photoFinalY + photoHeight
-      ) + 5;
+      Math.max(headerSectionStartY + logoContainerHeight, casinoNameTextY) + 5;
 
-    doc.setDrawColor(200, 200, 200);
-    doc.setLineWidth(0.3);
-    doc.line(margin, currentY, pageWidth - margin, currentY);
-    currentY += 10;
+    doc.setFontSize(10).setTextColor(0, 0, 0);
+    const infoLineHeight = 6;
 
-    doc.setFontSize(9);
-    doc.setTextColor(0, 0, 0);
+    const nomLabel = this.translate.instant('consent.pdf.lastNameLabel');
+    doc.setFont('helvetica', 'bold');
+    doc.text(nomLabel, margin, currentY);
     doc.setFont('helvetica', 'normal');
+    doc.text(lastName, margin + doc.getTextWidth(nomLabel) + 2, currentY);
+    currentY += infoLineHeight;
 
-    const textToDisplayInPdf = this.currentConsentDefinition
-      ? this.currentConsentDefinition.text
-      : this.translate.instant('generic.na');
-    const splitRulesText = doc.splitTextToSize(
-      textToDisplayInPdf,
-      contentWidth
+    const prenomLabel = this.translate.instant('consent.pdf.firstNameLabel');
+    doc.setFont('helvetica', 'bold');
+    doc.text(prenomLabel, margin, currentY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(firstName, margin + doc.getTextWidth(prenomLabel) + 2, currentY);
+    currentY += infoLineHeight;
+
+    const idLabel = this.translate.instant('consent.pdf.identityDocumentLabel');
+    doc.setFont('helvetica', 'bold');
+    doc.text(idLabel, margin, currentY);
+    doc.setFont('helvetica', 'normal');
+    doc.text(
+      identityDocument,
+      margin + doc.getTextWidth(idLabel) + 2,
+      currentY
     );
-    const rulesLineHeight = 4;
+    currentY += infoLineHeight + 4;
+
+    doc.setDrawColor(200, 200, 200).setLineWidth(0.3);
+    doc.line(margin, currentY, pageWidth - margin, currentY);
+    currentY += 8;
+
+    doc.setFontSize(9).setTextColor(0, 0, 0).setFont('helvetica', 'normal');
+    const splitRulesText = doc.splitTextToSize(rulesText, contentWidth);
     for (const line of splitRulesText) {
-      addPageIfNeeded(rulesLineHeight);
+      addPageIfNeeded(4);
       doc.text(line, margin, currentY);
-      currentY += rulesLineHeight;
+      currentY += 4;
     }
     currentY += 10;
 
     addPageIfNeeded(30);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'bold').setFontSize(14);
     doc.text(
       this.translate.instant('consent.pdf.agreementsTitle'),
       margin,
       currentY
     );
     currentY += 8;
-
-    doc.setDrawColor(200, 200, 200);
-    doc.setLineWidth(0.1);
+    doc.setDrawColor(200, 200, 200).setLineWidth(0.1);
     doc.line(margin, currentY, pageWidth - margin, currentY);
     currentY += 7;
 
     const checkboxSize = 4;
     const checkboxTextOffsetX = checkboxSize + 2;
-    const checkboxLineHeight = 4.5;
-    let checkboxSectionY = currentY;
+    const checkboxLineHeight = 5;
+    let tempY = currentY;
 
     doc.setFontSize(10);
-    let tempY =
-      checkboxSectionY + checkboxSize / 2 - checkboxLineHeight / 2 + 1.5;
-
-    doc.setDrawColor(0, 0, 0);
-    doc.setLineWidth(0.3);
-    doc.rect(margin, checkboxSectionY, checkboxSize, checkboxSize, 'S');
+    doc.setDrawColor(0, 0, 0).setLineWidth(0.3);
+    doc.rect(margin, tempY, checkboxSize, checkboxSize, 'S');
     if (this.mandatoryCheckbox) {
-      doc.setDrawColor(0, 0, 0);
       doc.setLineWidth(0.5);
-      doc.line(
-        margin + checkboxSize * 0.2,
-        checkboxSectionY + checkboxSize * 0.5,
-        margin + checkboxSize * 0.4,
-        checkboxSectionY + checkboxSize * 0.7
-      );
-      doc.line(
-        margin + checkboxSize * 0.4,
-        checkboxSectionY + checkboxSize * 0.7,
-        margin + checkboxSize * 0.8,
-        checkboxSectionY + checkboxSize * 0.3
-      );
+      doc.line(margin + 1, tempY + 2, margin + 2, tempY + 3);
+      doc.line(margin + 2, tempY + 3, margin + 3.5, tempY + 1);
     }
 
     let manLabelX = margin + checkboxTextOffsetX;
-    const initialManLabelX = manLabelX;
-
-    doc.setTextColor(255, 0, 0);
-    doc.setFont('helvetica', 'bold');
-    const asteriskChar = this.translate.instant('generic.requiredMarker');
-    doc.text(asteriskChar, manLabelX, tempY);
-    manLabelX +=
-      (doc.getStringUnitWidth(asteriskChar) * doc.getFontSize()) /
-      doc.internal.scaleFactor;
-
-    doc.setTextColor(0, 0, 0);
-    const consentBoldText =
-      ' ' + this.translate.instant('consent.pdf.consentLabel') + ' : ';
-    doc.text(consentBoldText, manLabelX, tempY);
-    manLabelX +=
-      (doc.getStringUnitWidth(consentBoldText) * doc.getFontSize()) /
-      doc.internal.scaleFactor;
-
-    doc.setFont('helvetica', 'normal');
-    const mainDeclarationText = this.translate.instant(
-      'consent.pdf.mainDeclaration'
+    doc.setFont('helvetica', 'bold').setTextColor(255, 0, 0);
+    doc.text(
+      this.translate.instant('generic.requiredMarker'),
+      manLabelX,
+      tempY + 3.5
     );
-    const requiredText = '   ' + this.translate.instant('generic.requiredText');
-
-    const originalManFontSize = doc.getFontSize();
-    let currentManFont = doc.getFont().fontName;
-    let currentManStyle = doc.getFont().fontStyle;
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(originalManFontSize);
-    const requiredTextWidth =
-      (doc.getStringUnitWidth(requiredText.trimStart()) * originalManFontSize) /
-        doc.internal.scaleFactor +
-      1;
-    doc.setFont(currentManFont, currentManStyle);
-    doc.setFontSize(originalManFontSize);
-
-    const availableWidthForMainText =
-      contentWidth -
-      checkboxTextOffsetX -
-      (manLabelX - initialManLabelX) -
-      requiredTextWidth;
-    const mainTextLines = doc.splitTextToSize(
-      mainDeclarationText,
-      availableWidthForMainText < 0
-        ? contentWidth - checkboxTextOffsetX
-        : availableWidthForMainText
+    manLabelX += doc.getTextWidth(
+      this.translate.instant('generic.requiredMarker')
     );
 
-    let manTextCurrentX = manLabelX;
-    for (let i = 0; i < mainTextLines.length; i++) {
-      if (i > 0) {
-        tempY += checkboxLineHeight;
-        manTextCurrentX = margin + checkboxTextOffsetX;
-        addPageIfNeeded(checkboxLineHeight);
-      }
-      doc.setTextColor(0, 0, 0);
-      doc.setFont('helvetica', 'normal');
-      doc.text(mainTextLines[i], manTextCurrentX, tempY);
-      if (i === mainTextLines.length - 1) {
-        manTextCurrentX +=
-          (doc.getStringUnitWidth(mainTextLines[i]) * doc.getFontSize()) /
-          doc.internal.scaleFactor;
-      }
-    }
-    doc.setTextColor(255, 0, 0);
-    doc.setFont('helvetica', 'italic');
-    doc.text(requiredText, manTextCurrentX, tempY);
-    doc.setFont('helvetica', 'normal');
     doc.setTextColor(0, 0, 0);
+    const consentBoldText = this.translate.instant('consent.pdf.consentLabel');
+    doc.text(consentBoldText, manLabelX, tempY + 3.5);
+    manLabelX += doc.getTextWidth(consentBoldText) + 1;
 
-    checkboxSectionY = tempY + checkboxLineHeight;
+    doc.setFont('helvetica', 'normal');
+    const requiredText = this.translate.instant('generic.requiredText');
+    const mainText = this.translate.instant('consent.pdf.mainDeclaration');
+    const availableWidth =
+      contentWidth - (manLabelX - margin) - doc.getTextWidth(requiredText) - 2;
+    const mainTextLines = doc.splitTextToSize(mainText, availableWidth);
 
-    tempY = checkboxSectionY + checkboxSize / 2 - checkboxLineHeight / 2 + 1.5;
-    doc.setDrawColor(0, 0, 0);
-    doc.setLineWidth(0.3);
-    doc.rect(margin, checkboxSectionY, checkboxSize, checkboxSize, 'S');
+    let lastLineY = tempY + 3.5;
+    mainTextLines.forEach((line: string, index: number) => {
+      const currentLineY = tempY + 3.5 + index * checkboxLineHeight;
+      doc.text(line, manLabelX, currentLineY);
+      lastLineY = currentLineY;
+    });
+
+    doc.setFont('helvetica', 'italic').setTextColor(255, 0, 0);
+    const lastLineX =
+      manLabelX + doc.getTextWidth(mainTextLines[mainTextLines.length - 1]) + 1;
+    doc.text(requiredText, lastLineX, lastLineY);
+
+    tempY = lastLineY + checkboxLineHeight + 2;
+
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'normal');
+    doc.rect(margin, tempY, checkboxSize, checkboxSize, 'S');
     if (this.optionalCheckbox) {
-      doc.setDrawColor(0, 0, 0);
       doc.setLineWidth(0.5);
-      doc.line(
-        margin + checkboxSize * 0.2,
-        checkboxSectionY + checkboxSize * 0.5,
-        margin + checkboxSize * 0.4,
-        checkboxSectionY + checkboxSize * 0.7
-      );
-      doc.line(
-        margin + checkboxSize * 0.4,
-        checkboxSectionY + checkboxSize * 0.7,
-        margin + checkboxSize * 0.8,
-        checkboxSectionY + checkboxSize * 0.3
-      );
+      doc.line(margin + 1, tempY + 2, margin + 2, tempY + 3);
+      doc.line(margin + 2, tempY + 3, margin + 3.5, tempY + 1);
     }
 
     let optLabelX = margin + checkboxTextOffsetX;
-    doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'bold');
-    const communicationsBoldText =
-      this.translate.instant('consent.pdf.communicationsLabel') + ' : ';
-    doc.text(communicationsBoldText, optLabelX, tempY);
-    optLabelX +=
-      (doc.getStringUnitWidth(communicationsBoldText) * doc.getFontSize()) /
-      doc.internal.scaleFactor;
+    const comBoldText = this.translate.instant(
+      'consent.pdf.communicationsLabel'
+    );
+    doc.text(comBoldText, optLabelX, tempY + 3.5);
+    optLabelX += doc.getTextWidth(comBoldText) + 1;
 
     doc.setFont('helvetica', 'normal');
-    const communicationsNormalText = this.translate.instant(
-      'consent.optionalCommunicationsLabelText'
+    const comTextLines = doc.splitTextToSize(
+      this.translate.instant('consent.optionalCommunicationsLabelText'),
+      contentWidth - (optLabelX - margin)
     );
-    const commTextLines = doc.splitTextToSize(
-      communicationsNormalText,
-      contentWidth -
-        checkboxTextOffsetX -
-        (optLabelX - (margin + checkboxTextOffsetX))
-    );
-    let optTextCurrentX = optLabelX;
-    for (let i = 0; i < commTextLines.length; i++) {
-      if (i > 0) {
-        tempY += checkboxLineHeight;
-        optTextCurrentX = margin + checkboxTextOffsetX;
-        addPageIfNeeded(checkboxLineHeight);
-      }
-      doc.text(commTextLines[i], optTextCurrentX, tempY);
-    }
-    checkboxSectionY = tempY + checkboxLineHeight;
-    currentY = checkboxSectionY + 7;
+    comTextLines.forEach((line: string, index: number) => {
+      doc.text(line, optLabelX, tempY + 3.5 + index * checkboxLineHeight);
+    });
+
+    currentY = tempY + comTextLines.length * checkboxLineHeight + 10;
 
     addPageIfNeeded(40);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'bold').setFontSize(14);
     doc.text(
       this.translate.instant('consent.pdf.signatureInfoTitle'),
       margin,
       currentY
     );
     currentY += 8;
-
-    doc.setDrawColor(200, 200, 200);
-    doc.setLineWidth(0.1);
-    doc.line(margin, currentY, pageWidth - margin, currentY);
+    doc
+      .setDrawColor(200, 200, 200)
+      .line(margin, currentY, pageWidth - margin, currentY);
     currentY += 7;
 
-    const sigInfoStartY = currentY;
     const signatureMaxHeight = 30;
-    const infoGap = 5;
-    const fixedInfoTextX = 95;
-    const signatureMaxWidth = fixedInfoTextX - margin - infoGap;
-    const infoTextX = fixedInfoTextX;
-    const infoTextWidth = pageWidth - margin - infoTextX;
-    const textInfoLineHeight = 5;
-
-    let signatureActualHeight = 0;
-    let signatureImgDataForPdf: HTMLImageElement | null = null;
-    let signatureImgRenderWidth = 0;
-
-    const signatureImgForPdfDataUrl = await this.getResizedSignatureDataUrl();
-
-    if (signatureImgForPdfDataUrl) {
-      const img = new Image();
-      img.src = signatureImgForPdfDataUrl;
-      try {
-        await new Promise<void>((resolve) => {
-          img.onload = () => {
-            const aspectRatio = img.width / img.height;
-            signatureImgRenderWidth = signatureMaxWidth;
-            let h = signatureImgRenderWidth / aspectRatio;
-            if (h > signatureMaxHeight) {
-              h = signatureMaxHeight;
-              signatureImgRenderWidth = h * aspectRatio;
-            }
-            signatureActualHeight = h;
-            signatureImgDataForPdf = img;
-            resolve();
-          };
-          img.onerror = () => {
-            signatureActualHeight = signatureMaxHeight;
-            resolve();
-          };
-        });
-      } catch (e) {
-        signatureActualHeight = signatureMaxHeight;
-      }
-    } else {
-      signatureActualHeight = signatureMaxHeight;
-    }
-
-    const now = new Date();
-    const consentDateFormatted = now.toLocaleString(
-      this.translate.currentLang || 'fr-FR',
-      {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      }
+    const signatureMaxWidth = 80;
+    const optimizedSignatureUrl = await this.getResizedSignatureDataUrl();
+    const signatureImgDataForPdf = await this.getSignatureWithWhiteBackground(
+      optimizedSignatureUrl
     );
-    const validUntilDate = new Date(now);
-    if (this.currentConsentDefinition?.consentYearsDuration) {
-      validUntilDate.setFullYear(
-        now.getFullYear() + this.currentConsentDefinition.consentYearsDuration
-      );
-    } else {
-      validUntilDate.setFullYear(now.getFullYear() + 1);
-    }
-
-    const validUntilDateFormatted = validUntilDate.toLocaleDateString(
-      this.translate.currentLang || 'fr-FR',
-      {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      }
-    );
-
-    const infoItemsForPdf = [
-      {
-        label: this.translate.instant('consent.pdf.consentDateLabel'),
-        value: consentDateFormatted,
-      },
-      {
-        label: this.translate.instant('consent.pdf.validUntilLabel'),
-        value: validUntilDateFormatted,
-      },
-      {
-        label: this.translate.instant('consent.pdf.consentIdLabel'),
-        value: this.consentIdToDisplayAndSubmit,
-      },
-    ];
-
-    const textInfoBlockActualHeight =
-      infoItemsForPdf.length * textInfoLineHeight;
-
-    const overallSectionHeight = Math.max(
-      signatureActualHeight,
-      textInfoBlockActualHeight
-    );
-
-    const centeredSignatureY =
-      sigInfoStartY + (overallSectionHeight - signatureActualHeight) / 2;
-    const centeredTextInfoY_start =
-      sigInfoStartY + (overallSectionHeight - textInfoBlockActualHeight) / 2;
-
     if (signatureImgDataForPdf) {
       doc.addImage(
         signatureImgDataForPdf,
         'PNG',
         margin,
-        centeredSignatureY,
-        signatureImgRenderWidth,
-        signatureActualHeight
+        currentY,
+        signatureMaxWidth,
+        signatureMaxHeight
       );
     } else {
-      doc.setDrawColor(0, 0, 0);
-      doc.setLineWidth(0.3);
-      doc.rect(
-        margin,
-        centeredSignatureY,
-        signatureMaxWidth,
-        signatureActualHeight,
-        'S'
-      );
-      doc.setFontSize(8);
-      doc.setTextColor(150, 150, 150);
+      doc
+        .setDrawColor(0, 0, 0)
+        .rect(margin, currentY, signatureMaxWidth, signatureMaxHeight, 'S');
+      doc.setFontSize(8).setTextColor(150, 150, 150);
       doc.text(
         this.translate.instant('consent.pdf.signatureNotProvided'),
         margin + signatureMaxWidth / 2,
-        centeredSignatureY + signatureActualHeight / 2,
+        currentY + signatureMaxHeight / 2,
         { align: 'center', baseline: 'middle' }
       );
     }
 
-    let currentTextInfoY = centeredTextInfoY_start;
+    const now = new Date();
+    const validUntilDate = new Date(now);
+    validUntilDate.setFullYear(now.getFullYear() + consentYearsDuration);
+
+    const infoX = margin + signatureMaxWidth + 10;
+    let infoY = currentY + 5;
     doc.setFontSize(9);
 
-    infoItemsForPdf.forEach((item) => {
-      let currentDrawX = infoTextX;
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(100, 100, 100);
-      doc.text(item.label, currentDrawX, currentTextInfoY);
+    doc.setFont('helvetica', 'normal').setTextColor(100, 100, 100);
+    doc.text(
+      this.translate.instant('consent.pdf.consentDateLabel'),
+      infoX,
+      infoY
+    );
+    infoY += 5;
+    doc.setFont('helvetica', 'bold').setTextColor(0, 0, 0);
+    doc.text(now.toLocaleString('fr-FR'), infoX, infoY);
+    infoY += 7;
 
-      const labelWidth =
-        (doc.getStringUnitWidth(item.label) * doc.getFontSize()) /
-        doc.internal.scaleFactor;
-      currentDrawX += labelWidth + 1;
+    doc.setFont('helvetica', 'normal').setTextColor(100, 100, 100);
+    doc.text(
+      this.translate.instant('consent.pdf.validUntilLabel'),
+      infoX,
+      infoY
+    );
+    infoY += 5;
+    doc.setFont('helvetica', 'bold').setTextColor(0, 0, 0);
+    doc.text(validUntilDate.toLocaleDateString('fr-FR'), infoX, infoY);
+    infoY += 7;
 
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(0, 0, 0);
-
-      doc.text(item.value, currentDrawX, currentTextInfoY, {
-        maxWidth: infoTextWidth - (currentDrawX - infoTextX),
-      });
-
-      currentTextInfoY += textInfoLineHeight;
-    });
-
-    currentY = sigInfoStartY + overallSectionHeight + 10;
+    doc.setFont('helvetica', 'normal').setTextColor(100, 100, 100);
+    doc.text(
+      this.translate.instant('consent.pdf.consentIdLabel'),
+      infoX,
+      infoY
+    );
+    infoY += 5;
+    doc.setFont('helvetica', 'bold').setTextColor(0, 0, 0);
+    doc.text(this.consentIdToDisplayAndSubmit, infoX, infoY);
 
     const totalPages = (doc as any).internal.getNumberOfPages();
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setTextColor(100, 100, 100);
+      doc.setFontSize(8).setTextColor(100, 100, 100);
+      const pagePrefix = this.translate.instant('consent.pdf.pagePrefixLabel');
+      const pageSeparator = this.translate.instant(
+        'consent.pdf.pageSeparatorLabel'
+      );
       doc.text(
-        `${this.translate.instant(
-          'consent.pdf.pagePrefixLabel'
-        )}${i}${this.translate.instant(
-          'consent.pdf.pageSeparatorLabel'
-        )}${totalPages}`,
+        `${pagePrefix} ${i} ${pageSeparator} ${totalPages}`,
         pageWidth - margin,
         pageHeight - margin + 7,
         { align: 'right' }
       );
     }
+
     return doc.output('blob');
   }
 }
