@@ -1,121 +1,82 @@
 <div class="consent-container">
-  <header class="player-info-header">
-    <div class="player-details">
-      <h2>{{ 'consent.playerInfoTitle' | translate }}</h2>
-      <div class="player-info-two-line-aligned-layout">
-        <span class="info-label">{{ 'consent.lastNameLabel' | translate }}:</span>
-        <span class="info-value">{{ lastName }}</span>
-        <span class="info-label">{{ 'consent.firstNameLabel' | translate }}:</span>
-        <span class="info-value">{{ firstName }}</span>
-        <span class="info-label">{{ 'consent.birthDateLabel' | translate }}</span>
-        <span class="info-value">{{ birthDate }}</span>
-        <span class="info-label">{{ 'generic.playerID' | translate }}:</span>
-        <span class="info-value">{{ cardIdNumber }}</span>
-      </div>
-    </div>
-    <img [src]="playerPhotoUrl" alt="Photo du Joueur" class="player-photo">
-  </header>
+  <div *ngIf="isLoadingInitialData" class="loading-overlay">
+    <div class="spinner"></div>
+    <p>{{ 'generic.loading' | translate }}</p>
+  </div>
 
-  <section class="conditions-section">
-    <div class="conditions-controls-header">
-      <h2>{{ 'consent.privacyPolicyTitle' | translate }}</h2>
+  <div class="consent-form" [class.hidden]="isLoadingInitialData">
+    <header class="main-header">
+      <div class="header-content">
+        <div class="logo-container">
+          <img [src]="casinoLogoUrl" (error)="playerPhotoUrl='assets/placeholder/placeholder.jpg'" alt="Casino Logo" class="logo-img">
+        </div>
+        <div class="player-info-container">
+          <h1 class="privacy-title">{{ 'consent.privacyPolicyTitle' | translate }}</h1>
+          <p class="casino-name">{{ casinoName }}</p>
+          <div class="player-details">
+            <p><span class="label">{{ 'consent.pdf.lastNameLabel' | translate }}</span> {{ lastName }}</p>
+            <p><span class="label">{{ 'consent.pdf.firstNameLabel' | translate }}</span> {{ firstName }}</p>
+            <p><span class="label">{{ 'consent.pdf.identityDocumentLabel' | translate }}</span> {{ cardIdNumber }}</p>
+          </div>
+        </div>
+      </div>
       <div class="text-size-controls">
-        <button
-          type="button"
-          (click)="setTextSize('small')"
-          class="text-size-btn font-small"
-          [class.active]="currentTextSizeInPx === predefinedTextSizes.small"
-          [attr.aria-label]="'Petite taille de texte' | translate">A</button>
-        <button
-          type="button"
-          (click)="setTextSize('medium')"
-          class="text-size-btn font-medium"
-          [class.active]="currentTextSizeInPx === predefinedTextSizes.medium"
-          [attr.aria-label]="'Taille de texte moyenne' | translate">A</button>
-        <button
-          type="button"
-          (click)="setTextSize('large')"
-          class="text-size-btn font-large"
-          [class.active]="currentTextSizeInPx === predefinedTextSizes.large"
-          [attr.aria-label]="'Grande taille de texte' | translate">A</button>
+        <button (click)="setTextSize('small')" [class.active]="getCurrentTextSizeKey() === 'small'">A</button>
+        <button (click)="setTextSize('medium')" [class.active]="getCurrentTextSizeKey() === 'medium'">A</button>
+        <button (click)="setTextSize('large')" [class.active]="getCurrentTextSizeKey() === 'large'">A</button>
       </div>
-    </div>
-    <div #rulesBody
-         class="conditions-content-container"
-         [style.--dynamic-font-size.px]="currentTextSizeInPx">
-      <div class="conditions-content">
-        <pre>{{ rulesText }}</pre>
-      </div>
-    </div>
-  </section>
+    </header>
 
-  <footer class="consent-actions-footer">
-    <div class="checkbox-group">
-      <label>
-        <input type="checkbox" [(ngModel)]="mandatoryCheckbox">
-        <span [style.font-size.px]="getScaledCheckboxLabelSize()">
-          <span class="required-marker">{{ 'generic.requiredMarker' | translate }}</span>
-          <strong>{{ 'consent.consentLabel' | translate }}</strong>
+    <div class="rules-section">
+      <div #rulesBody class="rules-body" [style.fontSize.px]="currentTextSizeInPx" (scroll)="onRulesScroll()">
+        <p [innerHTML]="rulesText"></p>
+      </div>
+    </div>
+
+    <div class="agreements-section">
+      <div class="checkbox-container">
+        <input type="checkbox" id="mandatoryCheckbox" [(ngModel)]="mandatoryCheckbox">
+        <label for="mandatoryCheckbox" class="checkbox-label" [style.fontSize.px]="getScaledCheckboxLabelSize()">
+          <span class="required-marker">*</span>
+          <span class="label-bold">{{ 'consent.pdf.consentLabel' | translate }}</span>
           {{ 'consent.consentDeclarationText' | translate }}
-          <span class="required-text-label">&nbsp;{{ 'generic.requiredText' | translate }}</span>
-
-        </span>
-      </label>
-      <label>
-        <input type="checkbox" [(ngModel)]="optionalCheckbox">
-        <span [style.font-size.px]="getScaledCheckboxLabelSize()"><strong>{{ 'consent.optionalCommunicationsLabelBold' | translate }}</strong>{{ 'consent.optionalCommunicationsLabelText' | translate }}</span>
-      </label>
-    </div>
-
-    <div class="signature-area">
-      <div class="signature-header">
-        <label for="signaturePadCanvas" class="signature-label">
-          <span class="required-marker">{{ 'generic.requiredMarker' | translate }}</span>
-          <span class="main-label-text">{{ 'consent.signatureLabel' | translate }}</span>
-          <span class="required-text-label">&nbsp;{{ 'generic.requiredText' | translate }}</span>
+          <span class="required-text-inline">{{ 'generic.requiredText' | translate }}</span>
         </label>
       </div>
-      <div class="signature-pad-wrapper" #signaturePadWrapper>
-        <canvas #signaturePadCanvas id="signaturePadCanvas"></canvas>
-        <button *ngIf="signatureDataUrl" type="button" (click)="clearSignature()" class="clear-signature-button icon-button" [attr.aria-label]="'consent.clearButton' | translate">
-        <svg fill="#000000" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-             width="800px" height="800px" viewBox="0 0 360 360" xml:space="preserve" class="icon eraser-icon-new">
-        <g>
-          <g>
-            <path d="M348.994,102.946L250.04,3.993c-5.323-5.323-13.954-5.324-19.277,0l-153.7,153.701l118.23,118.23l153.701-153.7
-                     C354.317,116.902,354.317,108.271,348.994,102.946z"/>
-            <path d="M52.646,182.11l-41.64,41.64c-5.324,5.322-5.324,13.953,0,19.275l98.954,98.957c5.323,5.322,13.954,5.32,19.277,0
-                     l41.639-41.641L52.646,182.11z"/>
-            <polygon points="150.133,360 341.767,360 341.767,331.949 182.806,331.949      "/>
-          </g>
-        </g>
-        </svg>
-        </button>
+      <div class="checkbox-container">
+        <input type="checkbox" id="optionalCheckbox" [(ngModel)]="optionalCheckbox">
+        <label for="optionalCheckbox" class="checkbox-label" [style.fontSize.px]="getScaledCheckboxLabelSize()">
+          <span class="label-bold">{{ 'consent.optionalCommunicationsLabelBold' | translate }}</span>
+          {{ 'consent.optionalCommunicationsLabelText' | translate }}
+        </label>
       </div>
     </div>
 
-    <button
-      type="button"
-      (click)="onSubmit()"
-      [disabled]="!isSubmitEnabled() || buttonState !== 'idle'"
-      class="validate-button"
-      [class.loading]="buttonState === 'loading'"
-      [class.success]="buttonState === 'success'">
-      <span *ngIf="buttonState === 'idle'">{{ 'consent.validateButton.idle' | translate }}</span>
-      <div *ngIf="buttonState === 'loading'" class="spinner"></div>
-      <svg *ngIf="buttonState === 'success' && !showValidationPopup" class="checkmark-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-        <path fill-rule="evenodd" d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.454-12.68a.75.75 0 0 1 1.04-.208Z" clip-rule="evenodd" />
-      </svg>
-    </button>
-  </footer>
+    <div class="signature-section">
+      <div class="signature-header">
+        <label>{{ 'consent.signatureLabel' | translate }}</label>
+        <button (click)="clearSignature()" class="clear-button">{{ 'consent.clearButton' | translate }}</button>
+      </div>
+      <div #signaturePadWrapper class="signature-pad-wrapper">
+        <canvas #signaturePadCanvas></canvas>
+      </div>
+    </div>
+
+    <footer class="main-footer">
+      <button class="validate-button" (click)="onSubmit()" [disabled]="!isSubmitEnabled()" [attr.data-state]="buttonState">
+        <span class="button-text">{{ 'consent.validateButton.idle' | translate }}</span>
+        <div class="spinner-container" *ngIf="buttonState === 'loading'">
+          <div class="spinner"></div>
+        </div>
+        <div class="success-checkmark" *ngIf="buttonState === 'success'">&#10003;</div>
+      </button>
+    </footer>
+  </div>
 
   <div *ngIf="showValidationPopup" class="validation-popup">
     <div class="popup-content">
-      <svg class="popup-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-        <path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z" clip-rule="evenodd" />
-      </svg>
+      <div class="success-icon">&#10003;</div>
       <p>{{ validationPopupMessage }}</p>
     </div>
   </div>
-
 </div>
