@@ -3,7 +3,6 @@ import { Injectable } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { ConfigService } from './config.service';
-import { UrlSerializer } from '@angular/router';
 
 export enum ConsentDefinitionStatusResponse {
   Draft = 0,
@@ -94,6 +93,12 @@ export interface PlayerConsentPOST {
   location: LocationRef;
 }
 
+export interface PlayerData {
+  firstName?: string;
+  lastName?: string;
+  photoUrl?: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -155,12 +160,12 @@ export class ApiService {
     return headers;
   }
 
-  getPlayerData(playerId: string): Observable<any> {
+  getPlayerData(playerId: string): Observable<PlayerData> {
     const errorCheck = this.checkApiUrl();
     if (errorCheck) return errorCheck;
 
     const url = `${this.apiUrl}api/web/v1/players/${playerId}`;
-    return this.http.get<any>(url, { headers: this.getHeaders() });
+    return this.http.get<PlayerData>(url, { headers: this.getHeaders() });
   }
 
   getPlayerPicture(playerId: string): Observable<Blob> {
