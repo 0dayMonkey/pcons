@@ -78,7 +78,7 @@ export interface ConsentDefinitionResponse {
 }
 
 export interface LocationRef {
-  locationType: string;
+  type: string;
   id: string;
 }
 
@@ -231,7 +231,8 @@ export class ApiService {
     if (errorCheck) return errorCheck;
 
     const url = `${this.apiUrl}api/web/v1/players/${playerId}/consents`;
-    const header = this.getHeaders().append("Site-Origin-ID", this.configService.getSiteId());
-    return this.http.post(url, consentData, { headers: header });
+    let headers = this.getHeaders();
+    headers = headers.append('Site-Origin-ID', this.configService.getSiteId());
+    return this.http.post(url, consentData, { headers: headers });
   }
 }

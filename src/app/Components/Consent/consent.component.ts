@@ -605,7 +605,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
       }
 
       const location: LocationRef = {
-        locationType: locationType,
+        type: locationType,
         id: locationId,
       };
 
