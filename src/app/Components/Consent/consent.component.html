@@ -1,17 +1,23 @@
 <div class="consent-container">
-  <header class="player-info-header">
+  <header class="player-info-header" [ngClass]="'layout--' + logoLayoutType">
     <img [src]="casinoLogoUrl" alt="Logo du Casino" class="casino-logo-display" *ngIf="casinoLogoUrl"/>
     <div class="casino-logo-placeholder" *ngIf="!casinoLogoUrl"></div>
 
     <div class="player-details">
-      <h2>{{ 'consent.playerInfoTitle' | translate }}</h2>
-      <div class="player-info-two-line-aligned-layout">
-        <span class="info-label">{{ 'consent.lastNameLabel' | translate }}:</span>
-        <span class="info-value">{{ lastName }}</span>
-        <span class="info-label">{{ 'consent.firstNameLabel' | translate }}:</span>
-        <span class="info-value">{{ firstName }}</span>
-        <span class="info-label">{{ 'consent.pdf.identityDocumentLabel' | translate }}:</span>
-        <span class="info-value">{{ cardIdNumber }}</span>
+      <h2 class="player-info-title">{{ 'consent.playerInfoTitle' | translate }}</h2>
+      <div class="player-info-list">
+        <div class="info-item">
+            <span class="info-label">{{ 'consent.lastNameLabel' | translate }}:</span>
+            <span class="info-value">{{ lastName }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">{{ 'consent.firstNameLabel' | translate }}:</span>
+            <span class="info-value">{{ firstName }}</span>
+        </div>
+        <div class="info-item-full">
+            <span class="info-label">{{ 'consent.pdf.identityDocumentLabel' | translate }}</span>
+            <span class="info-value">{{ documentIdInfo }}</span>
+        </div>
       </div>
     </div>
   </header>
@@ -24,28 +30,26 @@
           type="button"
           (click)="setTextSize('small')"
           class="text-size-btn font-small"
-          [class.active]="currentTextSizeInPx === predefinedTextSizes.small"
+          [class.active]="fontSizeManager.getCurrentTextSizeKey() === 'small'"
           [attr.aria-label]="'Petite taille de texte' | translate">A</button>
         <button
           type="button"
           (click)="setTextSize('medium')"
           class="text-size-btn font-medium"
-          [class.active]="currentTextSizeInPx === predefinedTextSizes.medium"
+          [class.active]="fontSizeManager.getCurrentTextSizeKey() === 'medium'"
           [attr.aria-label]="'Taille de texte moyenne' | translate">A</button>
         <button
           type="button"
           (click)="setTextSize('large')"
           class="text-size-btn font-large"
-          [class.active]="getCurrentTextSizeKey() === 'large'"
+          [class.active]="fontSizeManager.getCurrentTextSizeKey() === 'large'"
           [attr.aria-label]="'Grande taille de texte' | translate">A</button>
       </div>
     </div>
     <div #rulesBody
          class="conditions-content-container"
-         [style.--dynamic-font-size.px]="currentTextSizeInPx">
-      <div class="conditions-content">
-        {{ rulesText }}
-      </div>
+         [style.--dynamic-font-size.px]="fontSizeManager.currentTextSizeInPx">
+      <div class="conditions-content" [innerHTML]="rulesText"></div>
     </div>
   </section>
 
@@ -53,7 +57,7 @@
     <div class="checkbox-group">
       <label>
         <input type="checkbox" [(ngModel)]="mandatoryCheckbox">
-        <span [style.font-size.px]="getScaledCheckboxLabelSize()">
+        <span [style.font-size.px]="fontSizeManager.getScaledCheckboxLabelSize()">
           <span class="required-marker">{{ 'generic.requiredMarker' | translate }}</span>
           <strong>{{ 'consent.consentLabel' | translate }}</strong>
           {{ 'consent.consentDeclarationText' | translate }}
@@ -61,9 +65,9 @@
 
         </span>
       </label>
-      <label>
-        <input type="checkbox" [(ngModel)]="optionalCheckbox">
-        <span [style.font-size.px]="getScaledCheckboxLabelSize()"><strong>{{ 'consent.optionalCommunicationsLabelBold' | translate }}</strong>{{ 'consent.optionalCommunicationsLabelText' | translate }}</span>
+      <label [class.disabled]="isCommunicationCheckboxDisabled">
+        <input type="checkbox" [(ngModel)]="optionalCheckbox" [disabled]="isCommunicationCheckboxDisabled">
+        <span [style.font-size.px]="fontSizeManager.getScaledCheckboxLabelSize()"><strong>{{ 'consent.optionalCommunicationsLabelBold' | translate }}</strong>{{ 'consent.optionalCommunicationsLabelText' | translate }}</span>
       </label>
     </div>
 

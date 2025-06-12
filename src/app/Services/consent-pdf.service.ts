@@ -3,11 +3,12 @@ import { TranslateService } from '@ngx-translate/core';
 import jsPDF from 'jspdf';
 import { ConsentDefinitionResponse } from './api.service';
 import { SignaturePadService } from './signature-pad.service';
+import { PdfLayoutType } from './consent-orchestration.service';
 
 export interface PdfGenerationData {
   lastName: string;
   firstName: string;
-  cardIdNumber: string;
+  documentIdInfo: string;
   consentDefinition: ConsentDefinitionResponse | null;
   casinoName: string;
   casinoLogoUrl: string | null;
@@ -15,7 +16,42 @@ export interface PdfGenerationData {
   optionalCheckbox: boolean;
   signaturePadCanvas: ElementRef<HTMLCanvasElement>;
   consentIdToDisplayAndSubmit: string;
+  layoutType: PdfLayoutType;
 }
+
+const PDF_CONFIG = {
+  margin: 15,
+  fontSizes: {
+    headerTitle: 18,
+    headerSubtitle: 11,
+    playerInfo: 10,
+    sectionTitle: 14,
+    body: 9,
+    checkboxLabel: 10,
+    info: 9,
+    footer: 8,
+  },
+  colors: {
+    text: '#000000',
+    subtitle: '#505050',
+    line: '#C8C8C8',
+    placeholder: '#E6E6E6',
+    placeholderText: '#969696',
+    required: '#FF0000',
+  },
+  spacing: {
+    headerBottom: 5,
+    afterSectionTitle: 8,
+    section: 10,
+    line: 4,
+    checkboxLineHeight: 4.5,
+  },
+  checkboxSize: 4,
+  signatureBox: {
+    width: 80,
+    height: 30,
+  },
+};
 
 @Injectable({
   providedIn: 'root',
@@ -28,19 +64,13 @@ export class ConsentPdfService {
 
   public async generatePdfAsBase64(data: PdfGenerationData): Promise<string> {
     const blob = await this.generatePdfAsBlob(data);
-    return this.blobToBase64(blob);
-  }
-
-  private blobToBase64(blob: Blob): Promise<string> {
+    const reader = new FileReader();
     return new Promise((resolve, reject) => {
-      const reader = new FileReader();
       reader.onloadend = () => {
         const base64String = (reader.result as string).split(',')[1];
         resolve(base64String);
       };
-      reader.onerror = (error) => {
-        reject(error);
-      };
+      reader.onerror = reject;
       reader.readAsDataURL(blob);
     });
   }
@@ -51,469 +81,590 @@ export class ConsentPdfService {
       unit: 'mm',
       format: 'a4',
     });
+    let currentY = PDF_CONFIG.margin;
 
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 15;
-    let currentY = margin;
-    const contentWidth = pageWidth - 2 * margin;
-
-    const lastName = data.lastName || 'N/A';
-    const firstName = data.firstName || 'N/A';
-    const identityDocument = `${data.cardIdNumber}`;
-    const rulesText = data.consentDefinition?.text ?? 'N/A';
-    const consentYearsDuration =
-      data.consentDefinition?.consentYearsDuration ?? 1;
-    const casinoName = data.casinoName || 'N/A';
-    const casinoLogoDataUrl = data.casinoLogoUrl;
-
-    const addPageIfNeeded = (requiredHeight: number) => {
-      if (currentY + requiredHeight > pageHeight - margin - 10) {
+    const addPageIfNeeded = (requiredHeight: number, yPosition: number) => {
+      if (
+        yPosition + requiredHeight >
+        doc.internal.pageSize.getHeight() - PDF_CONFIG.margin
+      ) {
         doc.addPage();
-        currentY = margin;
+        return PDF_CONFIG.margin;
       }
+      return yPosition;
     };
 
-    const logoWidth = 35;
-    const logoHeight = 35;
-    const logoX = margin;
-    const logoActualRenderedHeight = logoHeight;
-    const titleFontSize = 18;
-    const casinoNameFontSize = 11;
-    const playerInfoFontSize = 10;
-    const gapAfterLogo = 5;
-    const smallGap = 3;
-    let headerSectionStartY = currentY;
-
-    if (casinoLogoDataUrl) {
-      const img = new Image();
-      img.crossOrigin = 'Anonymous';
-      img.src = casinoLogoDataUrl;
-      try {
-        await new Promise<void>((resolve) => {
-          img.onload = () => {
-            let imgFormat = 'PNG';
-            if (
-              img.src.toLowerCase().includes('jpeg') ||
-              img.src.toLowerCase().includes('jpg')
-            ) {
-              imgFormat = 'JPEG';
-            }
-            doc.addImage(
-              img,
-              imgFormat,
-              logoX,
-              headerSectionStartY,
-              logoWidth,
-              logoHeight
-            );
-            resolve();
-          };
-          img.onerror = () => {
-            doc.setFillColor(230, 230, 230);
-            doc.rect(logoX, headerSectionStartY, logoWidth, logoHeight, 'F');
-            doc.setFontSize(8);
-            doc.setTextColor(150, 150, 150);
-            doc.text(
-              this.translate.instant('consent.pdf.logoPlaceholder'),
-              logoX + logoWidth / 2,
-              headerSectionStartY + logoHeight / 2,
-              { align: 'center', baseline: 'middle' }
-            );
-            resolve();
-          };
-        });
-      } catch (e) {
-        doc.setFillColor(230, 230, 230);
-        doc.rect(logoX, headerSectionStartY, logoWidth, logoHeight, 'F');
-        doc.setFontSize(8);
-        doc.setTextColor(150, 150, 150);
-        doc.text(
-          this.translate.instant('consent.pdf.logoPlaceholder'),
-          logoX + logoWidth / 2,
-          headerSectionStartY + logoHeight / 2,
-          { align: 'center', baseline: 'middle' }
-        );
-      }
-    } else {
-      doc.setFillColor(230, 230, 230);
-      doc.rect(logoX, headerSectionStartY, logoWidth, logoHeight, 'F');
-      doc.setFontSize(8);
-      doc.setTextColor(150, 150, 150);
-      doc.text(
-        this.translate.instant('consent.pdf.logoPlaceholder'),
-        logoX + logoWidth / 2,
-        headerSectionStartY + logoHeight / 2,
-        { align: 'center', baseline: 'middle' }
-      );
-    }
-
-    const titleTextX = logoX + logoWidth + gapAfterLogo;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(titleFontSize);
-    doc.setTextColor(0, 0, 0);
-    const titleText = this.translate.instant('consent.pdf.title');
-    doc.text(titleText, titleTextX, headerSectionStartY, { baseline: 'top' });
-    const titleDimensions = doc.getTextDimensions(titleText, {
-      fontSize: titleFontSize,
-    });
-    const casinoNameTextY =
-      headerSectionStartY + titleDimensions.h + smallGap / 2;
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(casinoNameFontSize);
-    doc.setTextColor(80, 80, 80);
-    doc.text(casinoName, titleTextX, casinoNameTextY, { baseline: 'top' });
-    const casinoNameDimensions = doc.getTextDimensions(casinoName, {
-      fontSize: casinoNameFontSize,
-    });
-    doc.setFontSize(playerInfoFontSize);
-    doc.setTextColor(0, 0, 0);
-    const playerInfoLineHeight = doc.getTextDimensions('Test', {
-      fontSize: playerInfoFontSize,
-    }).h;
-    const playerInfoLeftAlign = titleTextX;
-    const labelValueGap = 2;
-    const verticalSpaceBetweenLines = playerInfoLineHeight + 2;
-    const logoBottomY = headerSectionStartY + logoActualRenderedHeight;
-    let docIdLineY = logoBottomY - 4;
-    let prenomLineY = docIdLineY - verticalSpaceBetweenLines;
-    let nomLineY = prenomLineY - verticalSpaceBetweenLines;
-    const minNomLineY = casinoNameTextY + casinoNameDimensions.h + smallGap;
-    if (nomLineY < minNomLineY) {
-      nomLineY = minNomLineY;
-      prenomLineY = nomLineY + verticalSpaceBetweenLines;
-      docIdLineY = prenomLineY + verticalSpaceBetweenLines;
-    }
-    doc.setFont('helvetica', 'bold');
-    const lastNameLabel = this.translate.instant('consent.pdf.lastNameLabel');
-    doc.text(lastNameLabel, playerInfoLeftAlign, nomLineY);
-    const lastNameLabelWidth = doc.getTextWidth(lastNameLabel);
-    doc.setFont('helvetica', 'normal');
-    doc.text(
-      lastName,
-      playerInfoLeftAlign + lastNameLabelWidth + labelValueGap,
-      nomLineY
+
+    currentY = await this._drawHeader(doc, data, currentY);
+    currentY = this._drawLine(doc, currentY);
+    currentY += PDF_CONFIG.spacing.section;
+
+    currentY = this._drawRules(
+      doc,
+      data.consentDefinition?.text,
+      currentY,
+      addPageIfNeeded
     );
-    doc.setFont('helvetica', 'bold');
-    const firstNameLabel = this.translate.instant('consent.pdf.firstNameLabel');
-    doc.text(firstNameLabel, playerInfoLeftAlign, prenomLineY);
-    const firstNameLabelWidth = doc.getTextWidth(firstNameLabel);
-    doc.setFont('helvetica', 'normal');
-    doc.text(
-      firstName,
-      playerInfoLeftAlign + firstNameLabelWidth + labelValueGap,
-      prenomLineY
-    );
-    doc.setFont('helvetica', 'bold');
-    const idLabel = this.translate.instant('consent.pdf.identityDocumentLabel');
-    doc.text(idLabel, playerInfoLeftAlign, docIdLineY);
-    const idLabelWidth = doc.getTextWidth(idLabel);
-    doc.setFont('helvetica', 'normal');
-    doc.text(
-      identityDocument,
-      playerInfoLeftAlign + idLabelWidth + labelValueGap,
-      docIdLineY,
-      {
-        maxWidth:
-          contentWidth -
-          (playerInfoLeftAlign - margin) -
-          idLabelWidth -
-          labelValueGap,
-      }
-    );
-    const bottomOfHeaderTextElements = Math.max(logoBottomY, docIdLineY);
-    const spaceBelowHeaderToSeparator = 4;
-    const separatorLineY =
-      bottomOfHeaderTextElements + spaceBelowHeaderToSeparator;
-    doc.setDrawColor(200, 200, 200);
-    doc.setLineWidth(0.3);
-    doc.line(margin, separatorLineY, pageWidth - margin, separatorLineY);
-    currentY = separatorLineY + 8;
+    currentY += PDF_CONFIG.spacing.section;
 
-    addPageIfNeeded(10);
-    doc.setFontSize(9).setTextColor(0, 0, 0).setFont('helvetica', 'normal');
-    const splitRulesText = doc.splitTextToSize(rulesText, contentWidth);
-    for (const line of splitRulesText) {
-      addPageIfNeeded(4);
-      doc.text(line, margin, currentY);
-      currentY += 4;
-    }
-    currentY += 10;
-
-    addPageIfNeeded(30);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.setTextColor(0, 0, 0);
-    doc.text(
+    currentY = this._drawSectionTitle(
+      doc,
       this.translate.instant('consent.pdf.agreementsTitle'),
-      margin,
-      currentY
+      currentY,
+      addPageIfNeeded
     );
-    currentY += 8;
+    currentY = this._drawLine(doc, currentY);
+    currentY += PDF_CONFIG.spacing.section / 2;
 
-    doc.setDrawColor(200, 200, 200);
-    doc.setLineWidth(0.1);
-    doc.line(margin, currentY, pageWidth - margin, currentY);
-    currentY += 7;
-
-    const checkboxSize = 4;
-    const checkboxTextOffsetX = checkboxSize + 2;
-    const checkboxLineHeight = 4.5;
-    let checkboxSectionY = currentY;
-
-    doc.setFontSize(10);
-    let tempY =
-      checkboxSectionY + checkboxSize / 2 - checkboxLineHeight / 2 + 1.5;
-
-    addPageIfNeeded(checkboxSize + checkboxLineHeight * 2);
-    doc.setDrawColor(0, 0, 0);
-    doc.setLineWidth(0.3);
-    doc.rect(margin, checkboxSectionY, checkboxSize, checkboxSize, 'S');
-    if (data.mandatoryCheckbox) {
-      doc.setLineWidth(0.5);
-      doc.line(
-        margin + checkboxSize * 0.2,
-        checkboxSectionY + checkboxSize * 0.5,
-        margin + checkboxSize * 0.4,
-        checkboxSectionY + checkboxSize * 0.7
-      );
-      doc.line(
-        margin + checkboxSize * 0.4,
-        checkboxSectionY + checkboxSize * 0.7,
-        margin + checkboxSize * 0.8,
-        checkboxSectionY + checkboxSize * 0.3
-      );
-    }
-
-    let manLabelX = margin + checkboxTextOffsetX;
-    const initialManLabelX = manLabelX;
-
-    doc.setTextColor(255, 0, 0);
-    doc.setFont('helvetica', 'bold');
-    const asteriskChar = this.translate.instant('generic.requiredMarker');
-    doc.text(asteriskChar, manLabelX, tempY);
-    manLabelX +=
-      (doc.getStringUnitWidth(asteriskChar) * doc.getFontSize()) /
-      doc.internal.scaleFactor;
-
-    doc.setTextColor(0, 0, 0);
-    const consentBoldText = this.translate.instant('consent.pdf.consentLabel');
-    doc.text(consentBoldText, manLabelX, tempY);
-    manLabelX +=
-      (doc.getStringUnitWidth(consentBoldText) * doc.getFontSize()) /
-        doc.internal.scaleFactor +
-      1;
-
-    doc.setFont('helvetica', 'normal');
-    const mainDeclarationText = this.translate.instant(
-      'consent.pdf.mainDeclaration'
+    const mandatoryKeys = {
+      bold: 'consent.pdf.consentLabel',
+      normal: 'consent.pdf.mainDeclaration',
+    };
+    currentY = this._drawCheckbox(
+      doc,
+      mandatoryKeys,
+      data.mandatoryCheckbox,
+      true,
+      currentY,
+      addPageIfNeeded
     );
-    const requiredText = ' ' + this.translate.instant('generic.requiredText');
+    currentY += PDF_CONFIG.spacing.line;
 
-    const originalManFontSize = doc.getFontSize();
-    doc.setFont('helvetica', 'italic');
-    const requiredTextWidth =
-      (doc.getStringUnitWidth(requiredText.trimStart()) * originalManFontSize) /
-        doc.internal.scaleFactor +
-      1;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(originalManFontSize);
-
-    const availableWidthForMainText =
-      contentWidth -
-      checkboxTextOffsetX -
-      (manLabelX - initialManLabelX) -
-      requiredTextWidth;
-    const mainTextLines = doc.splitTextToSize(
-      mainDeclarationText,
-      availableWidthForMainText < 10
-        ? contentWidth - checkboxTextOffsetX - (manLabelX - initialManLabelX)
-        : availableWidthForMainText
+    const optionalKeys = {
+      bold: 'consent.pdf.communicationsLabel',
+      normal: 'consent.optionalCommunicationsLabelText',
+    };
+    currentY = this._drawCheckbox(
+      doc,
+      optionalKeys,
+      data.optionalCheckbox,
+      false,
+      currentY,
+      addPageIfNeeded
     );
+    currentY += PDF_CONFIG.spacing.section;
 
-    let manTextCurrentX = manLabelX;
-    for (let i = 0; i < mainTextLines.length; i++) {
-      if (i > 0) {
-        tempY += checkboxLineHeight;
-        manTextCurrentX = margin + checkboxTextOffsetX;
-        addPageIfNeeded(checkboxLineHeight);
-      }
-      doc.setTextColor(0, 0, 0);
-      doc.setFont('helvetica', 'normal');
-      doc.text(mainTextLines[i], manTextCurrentX, tempY);
-      if (i === mainTextLines.length - 1) {
-        manTextCurrentX +=
-          (doc.getStringUnitWidth(mainTextLines[i]) * doc.getFontSize()) /
-          doc.internal.scaleFactor;
-      }
-    }
-    doc.setTextColor(255, 0, 0);
-    doc.setFont('helvetica', 'italic');
-    doc.text(requiredText, manTextCurrentX, tempY);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(0, 0, 0);
-
-    checkboxSectionY = tempY + checkboxLineHeight;
-
-    tempY = checkboxSectionY + checkboxSize / 2 - checkboxLineHeight / 2 + 1.5;
-    addPageIfNeeded(checkboxSize + checkboxLineHeight * 2);
-    doc.setDrawColor(0, 0, 0);
-    doc.setLineWidth(0.3);
-    doc.rect(margin, checkboxSectionY, checkboxSize, checkboxSize, 'S');
-    if (data.optionalCheckbox) {
-      doc.setLineWidth(0.5);
-      doc.line(
-        margin + checkboxSize * 0.2,
-        checkboxSectionY + checkboxSize * 0.5,
-        margin + checkboxSize * 0.4,
-        checkboxSectionY + checkboxSize * 0.7
-      );
-      doc.line(
-        margin + checkboxSize * 0.4,
-        checkboxSectionY + checkboxSize * 0.7,
-        margin + checkboxSize * 0.8,
-        checkboxSectionY + checkboxSize * 0.3
-      );
-    }
-
-    let optLabelX = margin + checkboxTextOffsetX;
-    doc.setTextColor(0, 0, 0);
-    doc.setFont('helvetica', 'bold');
-    const communicationsBoldText = this.translate.instant(
-      'consent.pdf.communicationsLabel'
-    );
-    doc.text(communicationsBoldText, optLabelX, tempY);
-    optLabelX +=
-      (doc.getStringUnitWidth(communicationsBoldText) * doc.getFontSize()) /
-        doc.internal.scaleFactor +
-      1;
-
-    doc.setFont('helvetica', 'normal');
-    const communicationsNormalText = this.translate.instant(
-      'consent.optionalCommunicationsLabelText'
-    );
-    const commTextLines = doc.splitTextToSize(
-      communicationsNormalText,
-      contentWidth -
-        checkboxTextOffsetX -
-        (optLabelX - (margin + checkboxTextOffsetX))
-    );
-
-    let optTextCurrentX = optLabelX;
-    for (let i = 0; i < commTextLines.length; i++) {
-      if (i > 0) {
-        tempY += checkboxLineHeight;
-        optTextCurrentX = margin + checkboxTextOffsetX;
-        addPageIfNeeded(checkboxLineHeight);
-      }
-      doc.text(commTextLines[i], optTextCurrentX, tempY);
-    }
-    checkboxSectionY = tempY + checkboxLineHeight;
-    currentY = checkboxSectionY + 7;
-
-    addPageIfNeeded(40);
-    doc.setFont('helvetica', 'bold').setFontSize(14);
-    doc.text(
+    currentY = this._drawSectionTitle(
+      doc,
       this.translate.instant('consent.pdf.signatureInfoTitle'),
-      margin,
-      currentY
+      currentY,
+      addPageIfNeeded
     );
-    currentY += 8;
+    currentY = this._drawLine(doc, currentY);
+    currentY += PDF_CONFIG.spacing.section / 2;
+
+    currentY = await this._drawSignatureAndInfo(
+      doc,
+      data,
+      currentY,
+      addPageIfNeeded
+    );
+
+    this._drawFooter(doc);
+
+    return doc.output('blob');
+  }
+
+  private _drawFooter(doc: jsPDF): void {
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const pageWidth = doc.internal.pageSize.getWidth();
+
     doc
-      .setDrawColor(200, 200, 200)
-      .line(margin, currentY, pageWidth - margin, currentY);
-    currentY += 7;
-
-    const signatureMaxHeight = 30;
-    const signatureMaxWidth = 80;
-    try {
-      const optimizedSignatureUrl =
-        await this.signaturePadService.getResizedSignatureDataUrl(
-          data.signaturePadCanvas.nativeElement
-        );
-      const signatureImgDataForPdf =
-        await this.signaturePadService.getSignatureWithWhiteBackground(
-          optimizedSignatureUrl
-        );
-      if (signatureImgDataForPdf) {
-        doc.addImage(
-          signatureImgDataForPdf,
-          'PNG',
-          margin,
-          currentY,
-          signatureMaxWidth,
-          signatureMaxHeight
-        );
-      }
-    } catch (e) {
-      doc
-        .setDrawColor(0, 0, 0)
-        .rect(margin, currentY, signatureMaxWidth, signatureMaxHeight, 'S');
-      doc.setFontSize(8).setTextColor(150, 150, 150);
-      doc.text(
-        this.translate.instant('consent.pdf.signatureNotProvided'),
-        margin + signatureMaxWidth / 2,
-        currentY + signatureMaxHeight / 2,
-        { align: 'center', baseline: 'middle' }
-      );
-    }
-
-    const now = new Date();
-    const validUntilDate = new Date(now);
-    validUntilDate.setFullYear(now.getFullYear() + consentYearsDuration);
-
-    const infoX = margin + signatureMaxWidth + 10;
-    let infoY = currentY + 5;
-    doc.setFontSize(9);
-
-    doc.setFont('helvetica', 'normal').setTextColor(100, 100, 100);
-    doc.text(
-      this.translate.instant('consent.pdf.consentDateLabel'),
-      infoX,
-      infoY
+      .setFontSize(PDF_CONFIG.fontSizes.footer)
+      .setTextColor(PDF_CONFIG.colors.subtitle);
+    const pagePrefix = this.translate.instant('consent.pdf.pagePrefixLabel');
+    const pageSeparator = this.translate.instant(
+      'consent.pdf.pageSeparatorLabel'
     );
-    infoY += 5;
-    doc.setFont('helvetica', 'bold').setTextColor(0, 0, 0);
-    doc.text(now.toLocaleString('fr-FR'), infoX, infoY);
-    infoY += 7;
 
-    doc.setFont('helvetica', 'normal').setTextColor(100, 100, 100);
-    doc.text(
-      this.translate.instant('consent.pdf.validUntilLabel'),
-      infoX,
-      infoY
-    );
-    infoY += 5;
-    doc.setFont('helvetica', 'bold').setTextColor(0, 0, 0);
-    doc.text(validUntilDate.toLocaleDateString('fr-FR'), infoX, infoY);
-    infoY += 7;
-
-    doc.setFont('helvetica', 'normal').setTextColor(100, 100, 100);
-    doc.text(
-      this.translate.instant('consent.pdf.consentIdLabel'),
-      infoX,
-      infoY
-    );
-    infoY += 5;
-    doc.setFont('helvetica', 'bold').setTextColor(0, 0, 0);
-    doc.text(data.consentIdToDisplayAndSubmit, infoX, infoY);
-
-    const totalPages = (doc as any).internal.getNumberOfPages();
-    for (let i = 1; i <= totalPages; i++) {
+    for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
-      doc.setFontSize(8).setTextColor(100, 100, 100);
-      const pagePrefix = this.translate.instant('consent.pdf.pagePrefixLabel');
-      const pageSeparator = this.translate.instant(
-        'consent.pdf.pageSeparatorLabel'
-      );
       doc.text(
-        `${pagePrefix} ${i} ${pageSeparator} ${totalPages}`,
-        pageWidth - margin,
-        pageHeight - margin + 7,
+        `${pagePrefix} ${i} ${pageSeparator} ${pageCount}`,
+        pageWidth - PDF_CONFIG.margin,
+        pageHeight - PDF_CONFIG.margin + 7,
         { align: 'right' }
       );
     }
+  }
 
-    return doc.output('blob');
+  private _drawSectionTitle(
+    doc: jsPDF,
+    title: string,
+    y: number,
+    addPageIfNeeded: (h: number, y: number) => number
+  ): number {
+    y = addPageIfNeeded(PDF_CONFIG.fontSizes.sectionTitle / 2, y);
+    doc
+      .setFontSize(PDF_CONFIG.fontSizes.sectionTitle)
+      .setFont('helvetica', 'bold')
+      .setTextColor(PDF_CONFIG.colors.text);
+    doc.text(title, PDF_CONFIG.margin, y);
+    return y + PDF_CONFIG.spacing.afterSectionTitle;
+  }
+
+  private _drawLine(doc: jsPDF, y: number): number {
+    doc
+      .setDrawColor(PDF_CONFIG.colors.line)
+      .setLineWidth(0.3)
+      .line(
+        PDF_CONFIG.margin,
+        y,
+        doc.internal.pageSize.getWidth() - PDF_CONFIG.margin,
+        y
+      );
+    return y;
+  }
+
+  private _drawRules(
+    doc: jsPDF,
+    rulesText: string | undefined,
+    y: number,
+    addPageIfNeeded: (h: number, y: number) => number
+  ): number {
+    y = addPageIfNeeded(PDF_CONFIG.fontSizes.body / 2, y);
+    doc
+      .setFontSize(PDF_CONFIG.fontSizes.body)
+      .setFont('helvetica', 'normal')
+      .setTextColor(PDF_CONFIG.colors.text);
+    const text = rulesText ?? 'N/A';
+    const contentWidth =
+      doc.internal.pageSize.getWidth() - 2 * PDF_CONFIG.margin;
+    const splitText = doc.splitTextToSize(text, contentWidth);
+
+    for (const line of splitText) {
+      y = addPageIfNeeded(PDF_CONFIG.spacing.line, y);
+      doc.text(line, PDF_CONFIG.margin, y);
+      y += PDF_CONFIG.spacing.line;
+    }
+    return y;
+  }
+
+  private _drawCheckbox(
+    doc: jsPDF,
+    textKeys: { bold: string; normal: string },
+    isChecked: boolean,
+    isRequired: boolean,
+    y: number,
+    addPageIfNeeded: (h: number, y: number) => number
+  ): number {
+    const checkboxTextX = PDF_CONFIG.margin + PDF_CONFIG.checkboxSize + 2;
+    const contentWidth =
+      doc.internal.pageSize.getWidth() - PDF_CONFIG.margin - checkboxTextX;
+
+    doc.setFontSize(PDF_CONFIG.fontSizes.checkboxLabel);
+
+    const boldText = this.translate.instant(textKeys.bold);
+    const normalText = this.translate.instant(textKeys.normal);
+    const fullText = isRequired
+      ? `* ${boldText} ${normalText} ${this.translate.instant(
+          'generic.requiredText'
+        )}`
+      : `${boldText} ${normalText}`;
+    const textLines = doc.splitTextToSize(fullText, contentWidth);
+
+    const requiredHeight =
+      textLines.length * PDF_CONFIG.spacing.checkboxLineHeight;
+    y = addPageIfNeeded(requiredHeight, y);
+
+    const initialY = y;
+
+    doc
+      .setDrawColor(PDF_CONFIG.colors.text)
+      .setLineWidth(0.3)
+      .rect(
+        PDF_CONFIG.margin,
+        initialY,
+        PDF_CONFIG.checkboxSize,
+        PDF_CONFIG.checkboxSize,
+        'S'
+      );
+    if (isChecked) {
+      doc.setLineWidth(0.5);
+      doc.line(
+        PDF_CONFIG.margin + 0.8,
+        initialY + 2,
+        PDF_CONFIG.margin + 1.6,
+        initialY + 2.8
+      );
+      doc.line(
+        PDF_CONFIG.margin + 1.6,
+        initialY + 2.8,
+        PDF_CONFIG.margin + 3.2,
+        initialY + 1.2
+      );
+    }
+
+    let textY =
+      initialY +
+      PDF_CONFIG.checkboxSize / 2 -
+      PDF_CONFIG.spacing.checkboxLineHeight / 2 +
+      1.5;
+    let currentX = checkboxTextX;
+
+    if (isRequired) {
+      doc.setTextColor(PDF_CONFIG.colors.required).setFont('helvetica', 'bold');
+      doc.text('*', currentX, textY);
+      currentX += doc.getTextWidth('*');
+    }
+
+    doc.setTextColor(PDF_CONFIG.colors.text).setFont('helvetica', 'bold');
+    doc.text(boldText, currentX, textY);
+    currentX += doc.getTextWidth(boldText);
+
+    const remainingText = ` ${normalText}`;
+    const requiredText = isRequired
+      ? ` ${this.translate.instant('generic.requiredText')}`
+      : '';
+
+    doc.setFont('helvetica', 'italic');
+    const requiredTextWidth = doc.getTextWidth(requiredText);
+    doc.setFont('helvetica', 'normal');
+
+    const remainingWidth =
+      doc.internal.pageSize.getWidth() -
+      PDF_CONFIG.margin -
+      currentX -
+      requiredTextWidth;
+    const splitRemaining = doc.splitTextToSize(remainingText, remainingWidth);
+
+    for (let i = 0; i < splitRemaining.length; i++) {
+      const line = splitRemaining[i];
+      if (i > 0) {
+        textY += PDF_CONFIG.spacing.checkboxLineHeight;
+        currentX = checkboxTextX;
+      }
+      doc.text(line, currentX, textY);
+      currentX += doc.getTextWidth(line);
+    }
+
+    if (isRequired) {
+      doc
+        .setFont('helvetica', 'italic')
+        .setTextColor(PDF_CONFIG.colors.required);
+      doc.text(requiredText, currentX, textY);
+    }
+
+    return initialY + requiredHeight;
+  }
+
+  private async _drawSignatureAndInfo(
+    doc: jsPDF,
+    data: PdfGenerationData,
+    y: number,
+    addPageIfNeeded: (h: number, y: number) => number
+  ): Promise<number> {
+    y = addPageIfNeeded(PDF_CONFIG.signatureBox.height, y);
+
+    try {
+      const optimizedUrl =
+        await this.signaturePadService.getResizedSignatureDataUrl(
+          data.signaturePadCanvas.nativeElement
+        );
+      const signatureImg =
+        await this.signaturePadService.getSignatureWithWhiteBackground(
+          optimizedUrl
+        );
+      if (signatureImg) {
+        doc.addImage(
+          signatureImg,
+          'PNG',
+          PDF_CONFIG.margin,
+          y,
+          PDF_CONFIG.signatureBox.width,
+          PDF_CONFIG.signatureBox.height
+        );
+      }
+    } catch (e) {
+      this._drawPlaceholder(
+        doc,
+        {
+          x: PDF_CONFIG.margin,
+          y,
+          width: PDF_CONFIG.signatureBox.width,
+          height: PDF_CONFIG.signatureBox.height,
+        },
+        this.translate.instant('consent.pdf.signatureNotProvided')
+      );
+    }
+
+    const infoX = PDF_CONFIG.margin + PDF_CONFIG.signatureBox.width + 10;
+    let infoY = y + 5;
+
+    const now = new Date();
+    const validUntil = new Date(now);
+    validUntil.setFullYear(
+      now.getFullYear() + (data.consentDefinition?.consentYearsDuration ?? 1)
+    );
+
+    const drawInfoLine = (labelKey: string, value: string) => {
+      doc.setFontSize(PDF_CONFIG.fontSizes.info);
+      doc
+        .setFont('helvetica', 'normal')
+        .setTextColor(PDF_CONFIG.colors.subtitle);
+      doc.text(this.translate.instant(labelKey), infoX, infoY);
+      infoY += 5;
+      doc.setFont('helvetica', 'bold').setTextColor(PDF_CONFIG.colors.text);
+      doc.text(value, infoX, infoY);
+      infoY += 7;
+    };
+
+    drawInfoLine('consent.pdf.consentDateLabel', now.toLocaleString('fr-FR'));
+    drawInfoLine(
+      'consent.pdf.validUntilLabel',
+      validUntil.toLocaleDateString('fr-FR')
+    );
+    drawInfoLine(
+      'consent.pdf.versionLabel',
+      data.consentDefinition?.version?.toString() ?? 'N/A'
+    );
+
+    return y + PDF_CONFIG.signatureBox.height;
+  }
+
+  private async _drawHeader(
+    doc: jsPDF,
+    data: PdfGenerationData,
+    y: number
+  ): Promise<number> {
+    if (data.layoutType === 'wide') {
+      return this._drawWideHeader(doc, data, y);
+    }
+    return this._drawPortraitHeader(doc, data, y);
+  }
+
+  private async _drawPortraitHeader(
+    doc: jsPDF,
+    data: PdfGenerationData,
+    y: number
+  ): Promise<number> {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const contentWidth = pageWidth - 2 * PDF_CONFIG.margin;
+    const logoBounds = {
+      x: PDF_CONFIG.margin,
+      y: y,
+      maxWidth: 35,
+      maxHeight: 35,
+    };
+
+    if (data.casinoLogoUrl) {
+      await this._drawImage(doc, data.casinoLogoUrl, logoBounds);
+    } else {
+      this._drawPlaceholder(
+        doc,
+        { ...logoBounds, width: 35, height: 35 },
+        this.translate.instant('consent.pdf.logoPlaceholder')
+      );
+    }
+
+    const titleTextX = PDF_CONFIG.margin + 35 + 5;
+    doc
+      .setFont('helvetica', 'bold')
+      .setFontSize(PDF_CONFIG.fontSizes.headerTitle)
+      .setTextColor(PDF_CONFIG.colors.text);
+    doc.text(this.translate.instant('consent.pdf.title'), titleTextX, y, {
+      baseline: 'top',
+    });
+
+    const titleDim = doc.getTextDimensions(
+      this.translate.instant('consent.pdf.title'),
+      { fontSize: PDF_CONFIG.fontSizes.headerTitle }
+    );
+    const subtitleY = y + titleDim.h + 2;
+    doc
+      .setFont('helvetica', 'normal')
+      .setFontSize(PDF_CONFIG.fontSizes.headerSubtitle)
+      .setTextColor(PDF_CONFIG.colors.subtitle);
+    doc.text(data.casinoName, titleTextX, subtitleY, { baseline: 'top' });
+
+    let infoY =
+      subtitleY +
+      doc.getTextDimensions(data.casinoName, {
+        fontSize: PDF_CONFIG.fontSizes.headerSubtitle,
+      }).h +
+      4;
+
+    const drawInfo = (labelKey: string, value: string) => {
+      doc
+        .setFont('helvetica', 'bold')
+        .setFontSize(PDF_CONFIG.fontSizes.playerInfo)
+        .setTextColor(PDF_CONFIG.colors.text);
+      const label = this.translate.instant(labelKey);
+      doc.text(label, titleTextX, infoY);
+      const labelWidth = doc.getTextWidth(label);
+      doc.setFont('helvetica', 'normal');
+      doc.text(value, titleTextX + labelWidth + 2, infoY, {
+        maxWidth:
+          contentWidth - (titleTextX - PDF_CONFIG.margin) - labelWidth - 2,
+      });
+      infoY += PDF_CONFIG.fontSizes.playerInfo * 0.5 + 2;
+    };
+
+    drawInfo('consent.pdf.lastNameLabel', data.lastName);
+    drawInfo('consent.pdf.firstNameLabel', data.firstName);
+    drawInfo('consent.pdf.identityDocumentLabel', data.documentIdInfo);
+
+    return (
+      Math.max(y + logoBounds.maxHeight, infoY) +
+      PDF_CONFIG.spacing.headerBottom
+    );
+  }
+
+  private async _drawWideHeader(
+    doc: jsPDF,
+    data: PdfGenerationData,
+    y: number
+  ): Promise<number> {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const contentWidth = pageWidth - 2 * PDF_CONFIG.margin;
+    const logoBounds = {
+      x: PDF_CONFIG.margin,
+      y: y,
+      maxWidth: contentWidth,
+      maxHeight: 35,
+    };
+
+    if (data.casinoLogoUrl) {
+      y = await this._drawImage(doc, data.casinoLogoUrl, logoBounds);
+    } else {
+      this._drawPlaceholder(
+        doc,
+        { ...logoBounds, width: contentWidth, height: 35 },
+        this.translate.instant('consent.pdf.logoPlaceholder')
+      );
+      y += 35;
+    }
+    y += PDF_CONFIG.spacing.headerBottom;
+
+    doc
+      .setFont('helvetica', 'bold')
+      .setFontSize(PDF_CONFIG.fontSizes.headerTitle)
+      .setTextColor(PDF_CONFIG.colors.text);
+    doc.text(this.translate.instant('consent.pdf.title'), pageWidth / 2, y, {
+      align: 'center',
+    });
+    y += doc.getTextDimensions('T', {
+      fontSize: PDF_CONFIG.fontSizes.headerTitle,
+    }).h;
+
+    doc
+      .setFont('helvetica', 'normal')
+      .setFontSize(PDF_CONFIG.fontSizes.headerSubtitle)
+      .setTextColor(PDF_CONFIG.colors.subtitle);
+    doc.text(data.casinoName, pageWidth / 2, y, { align: 'center' });
+    y +=
+      doc.getTextDimensions('T', {
+        fontSize: PDF_CONFIG.fontSizes.headerSubtitle,
+      }).h + 5;
+
+    const drawInfo = (labelKey: string, value: string) => {
+      doc
+        .setFont('helvetica', 'bold')
+        .setFontSize(PDF_CONFIG.fontSizes.playerInfo)
+        .setTextColor(PDF_CONFIG.colors.text);
+      const label = this.translate.instant(labelKey);
+      doc.text(label, PDF_CONFIG.margin, y);
+      const labelWidth = doc.getTextWidth(label);
+      doc.setFont('helvetica', 'normal');
+      doc.text(value, PDF_CONFIG.margin + labelWidth + 2, y);
+      y += PDF_CONFIG.fontSizes.playerInfo * 0.5 + 1.5;
+    };
+
+    drawInfo('consent.pdf.lastNameLabel', data.lastName);
+    drawInfo('consent.pdf.firstNameLabel', data.firstName);
+    drawInfo('consent.pdf.identityDocumentLabel', data.documentIdInfo);
+
+    return y + PDF_CONFIG.spacing.headerBottom;
+  }
+
+  private _drawPlaceholder(
+    doc: jsPDF,
+    bounds: { x: number; y: number; width: number; height: number },
+    text: string
+  ): void {
+    doc
+      .setFillColor(PDF_CONFIG.colors.placeholder)
+      .rect(bounds.x, bounds.y, bounds.width, bounds.height, 'F');
+    doc.setFontSize(8).setTextColor(PDF_CONFIG.colors.placeholderText);
+    doc.text(text, bounds.x + bounds.width / 2, bounds.y + bounds.height / 2, {
+      align: 'center',
+      baseline: 'middle',
+    });
+  }
+
+  private async _drawImage(
+    doc: jsPDF,
+    dataUrl: string,
+    bounds: { x: number; y: number; maxWidth: number; maxHeight: number }
+  ): Promise<number> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'Anonymous';
+      img.src = dataUrl;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) {
+          this._drawPlaceholder(
+            doc,
+            {
+              x: bounds.x,
+              y: bounds.y,
+              width: bounds.maxWidth,
+              height: bounds.maxHeight,
+            },
+            this.translate.instant('consent.pdf.logoPlaceholder')
+          );
+          return resolve(bounds.y + bounds.maxHeight);
+        }
+        ctx.drawImage(img, 0, 0);
+
+        const aspectRatio = img.naturalWidth / img.naturalHeight;
+        let imgWidth = bounds.maxWidth;
+        let imgHeight = imgWidth / aspectRatio;
+        if (imgHeight > bounds.maxHeight) {
+          imgHeight = bounds.maxHeight;
+          imgWidth = imgHeight * aspectRatio;
+        }
+        const xPos = bounds.x + (bounds.maxWidth - imgWidth) / 2;
+        const yPos = bounds.y + (bounds.maxHeight - imgHeight) / 2;
+        const format = dataUrl.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG';
+
+        try {
+          doc.addImage(canvas, format, xPos, yPos, imgWidth, imgHeight);
+        } catch (e) {
+          console.error('jsPDF addImage failed:', e);
+          this._drawPlaceholder(
+            doc,
+            {
+              x: bounds.x,
+              y: bounds.y,
+              width: bounds.maxWidth,
+              height: bounds.maxHeight,
+            },
+            this.translate.instant('consent.pdf.logoPlaceholder')
+          );
+        }
+        resolve(bounds.y + bounds.maxHeight);
+      };
+      img.onerror = () => {
+        this._drawPlaceholder(
+          doc,
+          {
+            x: bounds.x,
+            y: bounds.y,
+            width: bounds.maxWidth,
+            height: bounds.maxHeight,
+          },
+          this.translate.instant('consent.pdf.logoPlaceholder')
+        );
+        resolve(bounds.y + bounds.maxHeight);
+      };
+    });
   }
 }

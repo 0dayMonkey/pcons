@@ -11,18 +11,47 @@ export class LoggingService {
     private webSocketService: AppWebSocketService
   ) {}
 
-  public log(level: LogLevel, message: string, error?: any): void {
+  public log(level: LogLevel, message: string, data?: any): void {
     if (this.configService.getLogLevel() >= level) {
       const levelName = LogLevel[level];
       let logString = `[LOG][${levelName}] ${message}`;
 
-      if (error) {
-        const errorCode = error.name || 'UNKNOWN_ERROR';
-        const errorMessage = error.message || 'No error message available.';
-        const stack = error.stack ? `\n-- Stack Trace --\n${error.stack}` : '';
-        logString += `\n> Code: ${errorCode}\n> Message: ${errorMessage}${stack}`;
+      if (data) {
+        logString += ` - DETAILS: ${this.formatData(data)}`;
       }
+
       this.webSocketService.sendMessage(logString);
     }
+  }
+
+  private formatData(data: any): string {
+    if (data instanceof Error) {
+      return `Error: ${data.message}${
+        data.stack ? ' | Stack: ' + data.stack : ''
+      }`;
+    }
+
+    if (
+      data &&
+      typeof data === 'object' &&
+      data.hasOwnProperty('status') &&
+      data.hasOwnProperty('message')
+    ) {
+      return `HttpError: { status: ${data.status}, message: "${data.message}", name: "${data.name}" }`;
+    }
+
+    if (data instanceof Blob) {
+      return `[Blob, size: ${data.size} bytes, type: ${data.type}]`;
+    }
+
+    if (typeof data === 'object' && data !== null) {
+      try {
+        return JSON.stringify(data);
+      } catch (e) {
+        return 'Unserializable Object';
+      }
+    }
+
+    return String(data);
   }
 }

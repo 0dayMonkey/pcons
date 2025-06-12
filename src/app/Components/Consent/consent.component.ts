@@ -15,6 +15,7 @@ import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import {
   ConsentOrchestrationService,
   InitialData,
+  PdfLayoutType,
   SubmissionData,
 } from '../../Services/consent-orchestration.service';
 import { ConsentDefinitionResponse } from '../../Services/api.service';
@@ -22,6 +23,9 @@ import { SignaturePadService } from '../../Services/signature-pad.service';
 import { LoggingService } from '../../Services/logging.service';
 import { LogLevel } from '../../Services/websocket.service';
 import { ConfigService } from '../../Services/config.service';
+import { FontSizeManagerService } from '../../Services/font-size-manager.service';
+import { UiInteractionService } from '../../Services/ui-interaction.service';
+import { Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-consent',
@@ -29,60 +33,41 @@ import { ConfigService } from '../../Services/config.service';
   imports: [CommonModule, FormsModule, HttpClientModule, TranslateModule],
   templateUrl: './consent.component.html',
   styleUrls: ['./consent.component.scss'],
+  providers: [FontSizeManagerService, UiInteractionService],
 })
 export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   consentIdToDisplayAndSubmit: string = '';
   firstName: string = '';
   lastName: string = '';
-  cardIdNumber: string = '';
-  playerPhotoUrl: string = 'assets/placeholder/placeholder.jpg';
+  documentIdInfo: string = '';
+  rulesText: string = '';
+  mandatoryCheckbox: boolean = false;
+  optionalCheckbox: boolean = false;
+  isCommunicationCheckboxDisabled: boolean = true;
+  signatureDataUrl: string | null = null;
+  casinoName: string = '';
+  casinoLogoUrl: string | null = null;
+  public logoLayoutType: PdfLayoutType = 'portrait';
+  buttonState: 'idle' | 'loading' | 'success' = 'idle';
+  showValidationPopup: boolean = false;
+  validationPopupMessage: string = '';
+  isLoadingInitialData: boolean = true;
+  hasReachedBottomOnce: boolean = false;
+
   private currentPlayerId: string | null = null;
   private currentConsentDefinition: ConsentDefinitionResponse | null = null;
   private consentDefinitionIdToSubmit: number = 0;
   private definitionUserIdApi: string | null = null;
-  rulesText: string = '';
-  mandatoryCheckbox: boolean = false;
-  optionalCheckbox: boolean = false;
-  signatureDataUrl: string | null = null;
-  hasReachedBottomOnce: boolean = false;
-  private screenWidth: number = window.innerWidth;
-  private resizeListener: any;
-  casinoName: string = '';
-  casinoLogoUrl: string | null = null;
 
-  get predefinedTextSizes() {
-    const baseSize = Math.max(14, Math.min(window.innerWidth * 0.025, 30));
-    return {
-      small: Math.round(baseSize * 1),
-      medium: Math.round(baseSize * 1.5),
-      large: Math.round(baseSize * 2),
-    };
-  }
-
-  currentTextSizeInPx: number = this.predefinedTextSizes.medium;
-
-  get minTextSize(): number {
-    return Math.max(10, Math.min(window.innerWidth * 0.02, 14));
-  }
-
-  get maxTextSize(): number {
-    return Math.max(20, Math.min(window.innerWidth * 0.04, 65));
-  }
-
-  buttonState: 'idle' | 'loading' | 'success' = 'idle';
-  showValidationPopup: boolean = false;
-  validationPopupMessage: string = '';
   @ViewChild('signaturePadCanvas')
   signaturePadCanvas!: ElementRef<HTMLCanvasElement>;
   @ViewChild('rulesBody') rulesBody!: ElementRef<HTMLDivElement>;
   @ViewChild('signaturePadWrapper')
   signaturePadWrapper!: ElementRef<HTMLDivElement>;
+
   private resizeObserver!: ResizeObserver;
   private navigationTimer: any;
-  private initialPinchDistance: number = 0;
-  private pinchStartFontSize: number = 0;
-  private rulesBodyElement: HTMLDivElement | null = null;
-  isLoadingInitialData: boolean = true;
+  private destroy$ = new Subject<void>();
 
   constructor(
     private route: ActivatedRoute,
@@ -92,7 +77,9 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     private signaturePadService: SignaturePadService,
     private orchestrationService: ConsentOrchestrationService,
     private loggingService: LoggingService,
-    private configService: ConfigService
+    private configService: ConfigService,
+    public fontSizeManager: FontSizeManagerService,
+    public uiInteractionService: UiInteractionService
   ) {
     this.validationPopupMessage = this.translate.instant('alert.thankYou');
     this.rulesText = this.translate.instant('generic.loading');
@@ -102,19 +89,17 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     this.currentPlayerId = this.route.snapshot.paramMap.get('playerId');
     const siteId = this.configService.getSiteId();
 
-    this.loggingService.log(
-      LogLevel.DEBUG,
-      `Consent component initializing for player ID: ${
-        this.currentPlayerId || 'N/A'
-      }`
-    );
+    this.loggingService.log(LogLevel.DEBUG, 'Consent component initializing', {
+      playerId: this.currentPlayerId,
+      siteId: siteId,
+    });
+
     if (!this.currentPlayerId || !siteId) {
-      this.playerPhotoUrl = 'assets/placeholder/placeholder.jpg';
       this.rulesText = this.translate.instant('generic.apiError');
       this.isLoadingInitialData = false;
       this.loggingService.log(
         LogLevel.ERROR,
-        'Critical error: PlayerId or SiteId is missing from route parameters.'
+        'Critical error: PlayerId or SiteId is missing.'
       );
       this.orchestrationService.handleCriticalError(
         'PlayerId or SiteId missing'
@@ -122,36 +107,20 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
+    this.uiInteractionService.hasReachedBottom$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((value) => {
+        if (value) {
+          this.hasReachedBottomOnce = true;
+          this.cdr.detectChanges();
+        }
+      });
+
     this.loadInitialData(this.currentPlayerId, siteId);
-    this.applyTextSizeChangeSideEffects();
-    this.resizeListener = this.handleResize.bind(this);
-    window.addEventListener('resize', this.resizeListener);
-
-    this.currentTextSizeInPx = this.predefinedTextSizes.medium;
-  }
-
-  private handleResize(): void {
-    this.screenWidth = window.innerWidth;
-    const currentSizeKey = this.getCurrentTextSizeKey();
-    if (currentSizeKey) {
-      this.currentTextSizeInPx = this.predefinedTextSizes[currentSizeKey];
-    } else {
-      this.currentTextSizeInPx = this.predefinedTextSizes.medium;
-    }
-    this.applyTextSizeChangeSideEffects();
-  }
-
-  public getCurrentTextSizeKey(): 'small' | 'medium' | 'large' | null {
-    const sizes = this.predefinedTextSizes;
-    if (Math.abs(this.currentTextSizeInPx - sizes.small) < 1) return 'small';
-    if (Math.abs(this.currentTextSizeInPx - sizes.medium) < 1) return 'medium';
-    if (Math.abs(this.currentTextSizeInPx - sizes.large) < 1) return 'large';
-    return null;
   }
 
   private loadInitialData(playerId: string, siteId: string): void {
     this.isLoadingInitialData = true;
-    this.playerPhotoUrl = 'assets/placeholder/placeholder.jpg';
     this.cdr.detectChanges();
 
     this.orchestrationService
@@ -162,15 +131,24 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
             this.rulesText = this.translate.instant('generic.apiError');
             this.isLoadingInitialData = false;
             this.cdr.detectChanges();
+            this.loggingService.log(
+              LogLevel.ERROR,
+              'Initial data is null after loading.',
+              { playerId, siteId }
+            );
             return;
           }
-
           this.processInitialData(results);
         },
-        error: () => {
+        error: (err) => {
           this.rulesText = this.translate.instant('generic.apiError');
           this.isLoadingInitialData = false;
           this.cdr.detectChanges();
+          this.loggingService.log(
+            LogLevel.ERROR,
+            'Error while loading initial data.',
+            err
+          );
         },
       });
   }
@@ -182,6 +160,9 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
       consentDefinitions,
       siteInfo,
       siteLogoBase64,
+      hasActiveContacts,
+      identityDocumentString,
+      logoLayoutType,
     } = data;
 
     if (playerData) {
@@ -189,74 +170,47 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
         playerData.firstName || this.translate.instant('generic.na');
       this.lastName =
         playerData.lastName || this.translate.instant('generic.na');
-      this.cardIdNumber = this.currentPlayerId!;
-
-      if (playerData.photoUrl) {
-        this.playerPhotoUrl = playerData.photoUrl;
-      } else {
-        this.orchestrationService
-          .loadPlayerPicture(this.currentPlayerId!)
-          .subscribe((url) => {
-            this.playerPhotoUrl = url || 'assets/placeholder/placeholder.jpg';
-            this.cdr.detectChanges();
-          });
-      }
+      this.documentIdInfo = identityDocumentString || ' ';
     }
 
-    this.casinoName = siteInfo.establishmentName;
+    this.casinoName = siteInfo.LongLabel;
     if (siteLogoBase64) {
       this.casinoLogoUrl = `data:image/png;base64,${siteLogoBase64}`;
     }
 
+    this.logoLayoutType = logoLayoutType;
     this.consentIdToDisplayAndSubmit = newConsentId;
     this.currentConsentDefinition = consentDefinitions;
     this.rulesText = consentDefinitions.text;
     this.consentDefinitionIdToSubmit = consentDefinitions.id;
     this.definitionUserIdApi = consentDefinitions.userId || null;
+    this.isCommunicationCheckboxDisabled = !hasActiveContacts;
+    if (this.isCommunicationCheckboxDisabled) {
+      this.optionalCheckbox = false;
+    }
 
     this.isLoadingInitialData = false;
-    this.hasReachedBottomOnce = false;
+    this.uiInteractionService.resetScrollState();
     this.cdr.detectChanges();
-    this.loggingService.log(LogLevel.INFO, 'Initial data loaded successfully.');
-    setTimeout(() => this.checkScroll(), 50);
+    this.loggingService.log(
+      LogLevel.INFO,
+      'Initial data processed successfully.'
+    );
   }
 
   ngAfterViewInit(): void {
     this.initializeSignaturePad();
-    this.rulesBodyElement = this.rulesBody?.nativeElement || null;
-
-    if (this.rulesBodyElement) {
-      this.rulesBodyElement.addEventListener(
-        'scroll',
-        this.onRulesScroll.bind(this)
-      );
-      this.rulesBodyElement.addEventListener(
-        'touchstart',
-        this.onTouchStart.bind(this),
-        { passive: false }
-      );
-      this.rulesBodyElement.addEventListener(
-        'touchmove',
-        this.onTouchMove.bind(this),
-        { passive: false }
-      );
-      this.rulesBodyElement.addEventListener(
-        'touchend',
-        this.onTouchEnd.bind(this)
-      );
-    }
+    this.uiInteractionService.initialize(
+      this.rulesBody.nativeElement,
+      this.fontSizeManager
+    );
 
     this.resizeObserver = new ResizeObserver(() => {
-      if (
-        this.signaturePadWrapper &&
-        this.signaturePadWrapper.nativeElement.offsetWidth > 0
-      ) {
+      if (this.signaturePadWrapper?.nativeElement.offsetWidth > 0) {
         this.resizeSignaturePad();
       }
     });
-    if (this.signaturePadWrapper && this.signaturePadWrapper.nativeElement) {
-      this.resizeObserver.observe(this.signaturePadWrapper.nativeElement);
-    }
+    this.resizeObserver.observe(this.signaturePadWrapper.nativeElement);
   }
 
   ngOnDestroy(): void {
@@ -264,79 +218,14 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
       LogLevel.DEBUG,
       'Consent component being destroyed.'
     );
-    if (this.rulesBodyElement) {
-      this.rulesBodyElement.removeEventListener(
-        'scroll',
-        this.onRulesScroll.bind(this)
-      );
-      this.rulesBodyElement.removeEventListener(
-        'touchstart',
-        this.onTouchStart.bind(this)
-      );
-      this.rulesBodyElement.removeEventListener(
-        'touchmove',
-        this.onTouchMove.bind(this)
-      );
-      this.rulesBodyElement.removeEventListener(
-        'touchend',
-        this.onTouchEnd.bind(this)
-      );
-    }
-    if (
-      this.resizeObserver &&
-      this.signaturePadWrapper &&
-      this.signaturePadWrapper.nativeElement
-    ) {
-      this.resizeObserver.unobserve(this.signaturePadWrapper.nativeElement);
-    }
+    this.destroy$.next();
+    this.destroy$.complete();
+    this.uiInteractionService.ngOnDestroy();
+    this.resizeObserver?.disconnect();
     this.signaturePadService.off();
     if (this.navigationTimer) {
       clearTimeout(this.navigationTimer);
     }
-    if (this.resizeListener) {
-      window.removeEventListener('resize', this.resizeListener);
-    }
-  }
-
-  private onTouchStart(event: TouchEvent): void {
-    if (event.touches.length === 2 && this.rulesBodyElement) {
-      event.preventDefault();
-      this.initialPinchDistance = this.getDistanceBetweenTouches(event.touches);
-      this.pinchStartFontSize = this.currentTextSizeInPx;
-    }
-  }
-
-  private onTouchMove(event: TouchEvent): void {
-    if (
-      event.touches.length === 2 &&
-      this.rulesBodyElement &&
-      this.initialPinchDistance > 0
-    ) {
-      event.preventDefault();
-      const currentDistance = this.getDistanceBetweenTouches(event.touches);
-      const scaleFactor = currentDistance / this.initialPinchDistance;
-      let newSize = this.pinchStartFontSize * scaleFactor;
-      newSize = Math.max(this.minTextSize, Math.min(this.maxTextSize, newSize));
-
-      if (Math.abs(this.currentTextSizeInPx - newSize) >= 0.5) {
-        this.currentTextSizeInPx = Math.round(newSize);
-        this.applyTextSizeChangeSideEffects();
-      }
-    }
-  }
-
-  private onTouchEnd(event: TouchEvent): void {
-    if (event.touches.length < 2) {
-      this.initialPinchDistance = 0;
-    }
-  }
-
-  private getDistanceBetweenTouches(touches: TouchList): number {
-    const touch1 = touches[0];
-    const touch2 = touches[1];
-    const dx = touch2.clientX - touch1.clientX;
-    const dy = touch2.clientY - touch1.clientY;
-    return Math.sqrt(dx * dx + dy * dy);
   }
 
   private initializeSignaturePad(): void {
@@ -376,48 +265,9 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     this.cdr.detectChanges();
   }
 
-  public onRulesScroll(): void {
-    this.checkScroll();
-  }
-
-  private checkScroll(): void {
-    if (this.rulesBodyElement && !this.hasReachedBottomOnce) {
-      const el = this.rulesBodyElement;
-      const threshold = 10;
-      if (el.scrollHeight - el.scrollTop <= el.clientHeight + threshold) {
-        this.hasReachedBottomOnce = true;
-        this.cdr.detectChanges();
-      }
-    }
-  }
-
   public setTextSize(sizeKey: 'small' | 'medium' | 'large'): void {
-    this.currentTextSizeInPx = this.predefinedTextSizes[sizeKey];
-    this.applyTextSizeChangeSideEffects();
-  }
-
-  private applyTextSizeChangeSideEffects(): void {
-    this.currentTextSizeInPx = Math.max(
-      this.minTextSize,
-      Math.min(this.maxTextSize, this.currentTextSizeInPx)
-    );
-    this.hasReachedBottomOnce = false;
-    this.cdr.detectChanges();
-    setTimeout(() => {
-      this.checkScroll();
-    }, 50);
-  }
-
-  public getScaledCheckboxLabelSize(): number {
-    const viewportWidth = window.innerWidth;
-    const baseSize = Math.max(12, Math.min(viewportWidth * 0.025, 30));
-    const scaleFactor =
-      this.currentTextSizeInPx / this.predefinedTextSizes.medium;
-    let scaledSize = baseSize * scaleFactor;
-    const minSize = Math.max(10, Math.min(viewportWidth * 0.04, 20));
-    const maxSize = Math.max(20, Math.min(viewportWidth * 0.08, 35));
-    scaledSize = Math.max(minSize, Math.min(scaledSize, maxSize));
-    return Math.round(scaledSize);
+    this.fontSizeManager.setTextSize(sizeKey);
+    this.uiInteractionService.resetScrollState();
   }
 
   public isSubmitEnabled(): boolean {
@@ -434,26 +284,31 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   async onSubmit(): Promise<void> {
     if (!this.isSubmitEnabled() || this.buttonState !== 'idle') {
       if (this.buttonState !== 'idle') return;
-      let message = this.translate.instant('alert.validationImpossible');
+
+      const validationErrors: string[] = [];
       if (this.isLoadingInitialData)
-        message += `\n- ${this.translate.instant('generic.loading')}`;
+        validationErrors.push(this.translate.instant('generic.loading'));
       if (!this.hasReachedBottomOnce)
-        message += `\n- ${this.translate.instant('alert.mustReadConditions')}`;
+        validationErrors.push(
+          this.translate.instant('alert.mustReadConditions')
+        );
       if (!this.mandatoryCheckbox)
-        message += `\n- ${this.translate.instant(
-          'alert.mandatoryCheckboxRequired'
-        )}`;
+        validationErrors.push(
+          this.translate.instant('alert.mandatoryCheckboxRequired')
+        );
       if (!this.signatureDataUrl)
-        message += `\n- ${this.translate.instant('alert.signatureRequired')}`;
-      if (!this.currentConsentDefinition)
-        message += `\n- ${this.translate.instant('generic.apiError')}`;
-      if (!this.consentIdToDisplayAndSubmit)
-        message += `\n- ${this.translate.instant('generic.apiError')}`;
-      this.loggingService.log(
-        LogLevel.ERROR,
-        `Submit validation failed: ${message.replace(/\n/g, ' ')}`
-      );
-      alert(message);
+        validationErrors.push(
+          this.translate.instant('alert.signatureRequired')
+        );
+
+      this.loggingService.log(LogLevel.ERROR, 'Submit validation failed.', {
+        reasons: validationErrors,
+      });
+
+      const alertMessage = `${this.translate.instant(
+        'alert.validationImpossible'
+      )}\n- ${validationErrors.join('\n- ')}`;
+      alert(alertMessage);
       return;
     }
 
@@ -468,12 +323,13 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
       definitionUserIdApi: this.definitionUserIdApi,
       lastName: this.lastName,
       firstName: this.firstName,
-      cardIdNumber: this.cardIdNumber,
+      documentIdInfo: this.documentIdInfo,
       currentConsentDefinition: this.currentConsentDefinition,
       casinoName: this.casinoName,
       casinoLogoUrl: this.casinoLogoUrl,
       mandatoryCheckbox: this.mandatoryCheckbox,
       signaturePadCanvas: this.signaturePadCanvas,
+      logoLayoutType: this.logoLayoutType,
     };
 
     const success = await this.orchestrationService.submitConsent(
@@ -485,7 +341,6 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
       this.showValidationPopup = true;
       this.cdr.detectChanges();
 
-      if (this.navigationTimer) clearTimeout(this.navigationTimer);
       this.navigationTimer = setTimeout(() => {
         this.showValidationPopup = false;
         this.router.navigate(['/logo'], { skipLocationChange: true });
@@ -503,17 +358,16 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   private resetFormState(): void {
     this.mandatoryCheckbox = false;
     this.optionalCheckbox = false;
+    this.isCommunicationCheckboxDisabled = true;
     this.clearSignature();
     this.hasReachedBottomOnce = false;
-    this.currentTextSizeInPx = this.predefinedTextSizes.medium;
-    this.applyTextSizeChangeSideEffects();
-    if (this.rulesBodyElement) this.rulesBodyElement.scrollTop = 0;
+    this.setTextSize('medium');
     this.rulesText = this.translate.instant('generic.loading');
     this.consentIdToDisplayAndSubmit = '';
     this.currentConsentDefinition = null;
     this.isLoadingInitialData = true;
-    this.playerPhotoUrl = 'assets/placeholder/placeholder.jpg';
     this.casinoName = '';
     this.casinoLogoUrl = null;
+    this.logoLayoutType = 'portrait';
   }
 }

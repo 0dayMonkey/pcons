@@ -1,58 +1,59 @@
 {
+  "generic": {
+    "loading": "Loading...",
+    "na": "N/A",
+    "requiredMarker": "*",
+    "requiredText": "Required",
+    "error": "Error",
+    "playerID": "Player ID",
+    "apiError": "API Error"
+  },
   "consent": {
     "playerInfoTitle": "Player Information",
     "lastNameLabel": "Last Name",
     "firstNameLabel": "First Name",
-    "birthDateLabel": "Born on:",
+    "birthDateLabel": "Birth Date:",
     "privacyPolicyTitle": "Privacy Policy",
     "consentLabel": "Consent:",
-    "consentDeclarationText": "You declare that you have read the foregoing and give your consent, to the extent necessary, to the content of this paragraph.",
+    "consentDeclarationText": " You declare that you have been informed of and consent to the processing of my personal data as described above.",
     "optionalCommunicationsLabelBold": "Communications:",
-    "optionalCommunicationsLabelText": "You wish to be kept informed of the Operator's commercial and social activities by means of electronic communications (SMS, e-mail, social networks...). You will have the option to unsubscribe at any time.",
+    "optionalCommunicationsLabelText": " You wish to be kept informed of the Operator's commercial and social activities by electronic communications (SMS, e-mail, social networks...). You will have the possibility to unsubscribe at any time.",
     "signatureLabel": "Handwritten Signature",
     "clearButton": "Clear",
     "validateButton": {
       "idle": "Validate"
     },
     "pdf": {
-      "title": "Privacy Policy",
+      "title": "Privacy Protection",
       "lastNameLabel": "Last Name:",
       "firstNameLabel": "First Name:",
-      "birthDateLabel": "Date of birth:",
+      "birthDateLabel": "Birth Date:",
       "playerIDLabel": "Player ID:",
       "photoPlaceholder": "Photo",
-      "agreementsTitle": "Agreements Given",
+      "agreementsTitle": "Consents Given",
       "consentLabel": "Consent:",
-      "mainDeclaration": "You declare that you have read the foregoing and give your consent, to the extent necessary, to the content of this paragraph.",
+      "mainDeclaration": "You declare that you are aware of what precedes and give your consent, to the extent necessary, to the content of this paragraph.",
       "communicationsLabel": "Communications:",
       "signatureInfoTitle": "Signature & Information",
       "signatureNotProvided": "Signature not provided",
-      "consentDateLabel": "Date of consent:",
+      "consentDateLabel": "Consent date:",
       "validUntilLabel": "Valid until:",
       "consentIdLabel": "Consent ID:",
       "pagePrefixLabel": "Page ",
       "pageSeparatorLabel": " of ",
-      "identityDocumentLabel": "Identity Document:",
-      "logoPlaceholder": "Logo"
+      "identityDocumentLabel": "Identity Document :",
+      "logoPlaceholder": "Logo",
+      "versionLabel": "Version"
     }
   },
   "alert": {
-    "validationImpossible": "Validation impossible:",
+    "validationImpossible": "Can't check:",
     "mustReadConditions": "- Please read all the conditions.",
     "mandatoryCheckboxRequired": "- The mandatory consent box must be checked.",
-    "signatureRequired": "- The signature is required.",
+    "signatureRequired": "- A signature is required.",
     "thankYou": "Thank you for your trust!",
-    "pdfUploadError": "Error uploading the PDF to the server:",
-    "pdfUploadErrorDetail": "Error uploading the PDF to the server. Check the console for more details.",
-    "pdfGenerationError": "Error generating the PDF."
-  },
-  "generic": {
-    "loading": "Loading...",
-    "error": "Error",
-    "playerID": "Player ID",
-    "na": "N/A",
-    "apiError": "API Error",
-    "requiredMarker": "*",
-    "requiredText": "Required"
+    "pdfUploadError": "Error uploading PDF to server:",
+    "pdfUploadErrorDetail": "Error uploading PDF to server. Check console for details.",
+    "pdfGenerationError": "Error generating PDF."
   }
 }

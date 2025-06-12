@@ -1,7 +1,6 @@
-import { ApplicationInitStatus, Injectable } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of, tap } from 'rxjs';
-import { ApiService } from './api.service';
+import { Observable, of, tap, firstValueFrom } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -18,20 +17,23 @@ export class ConfigService {
 
   constructor(private http: HttpClient) {}
 
-  public getConfig(): Observable<IAppConfig> {
-    if (this.config) {
-      return of(this.config);
-    }
+  public loadConfig(): Promise<IAppConfig> {
     const jsonFile = './assets/config.json';
-    return this.http.get<IAppConfig>(jsonFile).pipe(
-      tap((data) => {
-        if (data.apiUrl && !data.apiUrl.endsWith('/')) {
-          data.apiUrl += '/';
-        }
-        this.config = data;
-        this.logLevelInternal = data.wslog || 0;
-      })
+    return firstValueFrom(
+      this.http.get<IAppConfig>(jsonFile).pipe(
+        tap((data) => {
+          if (data.apiUrl && !data.apiUrl.endsWith('/')) {
+            data.apiUrl += '/';
+          }
+          this.config = data;
+          this.logLevelInternal = data.wslog || 0;
+        })
+      )
     );
+  }
+
+  public getConfig(): Observable<IAppConfig> {
+    return of(this.config!);
   }
 
   setWsPort(port: string): void {
@@ -62,20 +64,20 @@ export class ConfigService {
     this.siteIdInternal = siteId;
   }
 
-  setLocTyp(locTyp: string): void {
-    this.locTypInternal = locTyp;
-  }
-
-  setLocId(locId: string): void {
-    this.locIdInternal = locId;
-  }
-
   getSiteId(): string {
     return this.siteIdInternal;
   }
 
+  setLocTyp(locTyp: string): void {
+    this.locTypInternal = locTyp;
+  }
+
   getLocTyp(): string {
     return this.locTypInternal;
+  }
+
+  setLocId(locId: string): void {
+    this.locIdInternal = locId;
   }
 
   getLocId(): string {

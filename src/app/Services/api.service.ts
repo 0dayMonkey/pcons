@@ -96,14 +96,13 @@ export interface PlayerConsentPOST {
 export interface PlayerData {
   firstName?: string;
   lastName?: string;
-  photoUrl?: string;
 }
 
 export interface SiteResponse {
   companyId: string;
-  establishmentId: string;
-  casinoId: number;
-  establishmentName: string;
+  SiteCode: string;
+  Id: number;
+  LongLabel: string;
   shortLabel: string;
   direction: string;
   languageId: string;
@@ -117,6 +116,48 @@ export interface SiteResponse {
 
 export interface SiteLogoResponse {
   logoBase64: string;
+}
+
+export interface ContactDetailRef {
+  value: string;
+  accept: boolean;
+}
+
+export interface CustomerContactResponse {
+  contactDetailEmail?: ContactDetailRef | null;
+  contactDetailPhone?: ContactDetailRef | null;
+  contactDetailMobile?: ContactDetailRef | null;
+  contactDetailFax?: ContactDetailRef | null;
+  contactDetailMailing?: ContactDetailRef | null;
+  preferredContactMean?: any | null;
+  badOrMissingAddress?: boolean | null;
+  mailsCollectedAtCasino?: boolean | null;
+}
+
+export interface IdDocTypeRef {
+  id: string;
+  label: string;
+}
+
+export interface CountryRef {
+  id: string;
+  label: string;
+}
+
+export interface CityRef {
+  id: string;
+  label: string;
+}
+
+export interface PlayerDocumentResponse {
+  id: string;
+  documentNumber: string;
+  documentType: IdDocTypeRef;
+  issuingCountry: CountryRef;
+  issuingCity: CityRef;
+  issueDate?: string | null;
+  expiryDate?: string | null;
+  lastUpdatedTimestamp: string;
 }
 
 @Injectable({
@@ -188,13 +229,26 @@ export class ApiService {
     return this.http.get<PlayerData>(url, { headers: this.getHeaders() });
   }
 
-  getPlayerPicture(playerId: string): Observable<Blob> {
+  getPlayerContacts(
+    playerId: string
+  ): Observable<CustomerContactResponse | null> {
     const errorCheck = this.checkApiUrl();
     if (errorCheck) return errorCheck;
 
-    const url = `${this.apiUrl}api/web/v1/players/${playerId}/pictures/Default`;
-    const headers = this.getHeaders(false);
-    return this.http.get(url, { headers: headers, responseType: 'blob' });
+    const url = `${this.apiUrl}api/web/v1/players/${playerId}/contacts`;
+    return this.http.get<CustomerContactResponse>(url, {
+      headers: this.getHeaders(),
+    });
+  }
+
+  getPlayerDocuments(playerId: string): Observable<PlayerDocumentResponse[]> {
+    const errorCheck = this.checkApiUrl();
+    if (errorCheck) return errorCheck;
+
+    const url = `${this.apiUrl}api/web/v1/players/${playerId}/id-documents`;
+    return this.http.get<PlayerDocumentResponse[]>(url, {
+      headers: this.getHeaders(),
+    });
   }
 
   getActiveConsentDefinition(): Observable<ConsentDefinitionResponse> {
@@ -268,10 +322,10 @@ export class ApiService {
     return this.http.get<SiteResponse>(url, { headers: this.getHeaders() });
   }
 
-  getSiteLogo(casinoId: number): Observable<SiteLogoResponse> {
+  getSiteLogo(Id: number): Observable<SiteLogoResponse> {
     const errorCheck = this.checkApiUrl();
     if (errorCheck) return errorCheck;
-    const url = `${this.apiUrl}api/web/setup/v1/sites/${casinoId}/logo`;
+    const url = `${this.apiUrl}api/web/setup/v1/sites/${Id}/logo`;
     return this.http.get<SiteLogoResponse>(url, { headers: this.getHeaders() });
   }
 }

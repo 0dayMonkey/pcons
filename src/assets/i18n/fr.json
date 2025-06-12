@@ -1,4 +1,13 @@
 {
+  "generic": {
+    "loading": "Chargement...",
+    "na": "N/A",
+    "requiredMarker": "*",
+    "requiredText": "Requis",
+    "error": "Erreur",
+    "playerID": "ID Joueur",
+    "apiError": "Erreur API"
+  },
   "consent": {
     "playerInfoTitle": "Information du Joueur",
     "lastNameLabel": "Nom",
@@ -8,7 +17,7 @@
     "consentLabel": "Consentement:",
     "consentDeclarationText": " Vous déclarez avoir pris connaissance de ce qui précède et vous donnez votre consentement, dans la mesure nécessaire, au contenu de ce paragraphe.",
     "optionalCommunicationsLabelBold": "Communications:",
-    "optionalCommunicationsLabelText": " Vous souhaitez être tenus informés des activités commerciales et sociales de l’Exploitant par voie de communications électroniques (SMS, e-mail, réseaux sociaux...). Vous aurez la possibilité de vous désinscrire à tout moment",
+    "optionalCommunicationsLabelText": " Vous souhaitez être tenus informés des activités commerciales et sociales de l’Exploitant par voie de communications électroniques (SMS, e-mail, réseaux sociaux...). Vous aurez la possibilité de vous désinscrire à tout moment.",
     "signatureLabel": "Signature Manuscrite",
     "clearButton": "Effacer",
     "validateButton": {
@@ -32,8 +41,9 @@
       "consentIdLabel": "ID du consentement :",
       "pagePrefixLabel": "Page ",
       "pageSeparatorLabel": " sur ",
-      "identityDocumentLabel": "Document d'identité ",
-    "logoPlaceholder": "Logo"
+      "identityDocumentLabel": "Document d'identité:",
+      "logoPlaceholder": "Logo",
+      "versionLabel": "Version"
     }
   },
   "alert": {
@@ -45,14 +55,5 @@
     "pdfUploadError": "Erreur lors de l'envoi du PDF au serveur:",
     "pdfUploadErrorDetail": "Erreur lors de l'envoi du PDF au serveur. Vérifiez la console pour plus de détails.",
     "pdfGenerationError": "Erreur lors de la génération du PDF."
-  },
-  "generic": {
-    "loading": "Chargement...",
-    "error": "Erreur",
-    "playerID": "ID Joueur",
-    "na": "N/A",
-    "apiError": "Erreur API",
-    "requiredMarker": "*",
-    "requiredText": "Requis"
   }
 }
