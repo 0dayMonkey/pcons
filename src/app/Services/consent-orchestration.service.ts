@@ -29,10 +29,9 @@ export interface InitialData {
   newConsentId: string;
   consentDefinitions: ConsentDefinitionResponse;
   siteInfo: SiteResponse;
-  siteLogoBase64: string | null;
+  siteLogoUrl: string | null;
   hasActiveContacts: boolean;
   identityDocumentString: string | null;
-  logoLayoutType: PdfLayoutType;
 }
 
 export interface SubmissionData {
@@ -65,25 +64,6 @@ export class ConsentOrchestrationService {
     private loggingService: LoggingService
   ) {}
 
-  private async getLogoLayoutType(
-    base64Logo: string | null
-  ): Promise<PdfLayoutType> {
-    if (!base64Logo) {
-      return 'portrait';
-    }
-
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.src = `data:image/png;base64,${base64Logo}`;
-      img.onload = () => {
-        resolve(img.width > img.height * 1.7 ? 'wide' : 'portrait');
-      };
-      img.onerror = () => {
-        resolve('portrait');
-      };
-    });
-  }
-
   public loadInitialData(
     playerId: string,
     siteId: number
@@ -98,11 +78,6 @@ export class ConsentOrchestrationService {
         const newConsentId$ = this.apiService.getNewConsentId();
         const consentDefinitions$ =
           this.apiService.getActiveConsentDefinition();
-        const logo$ = siteInfo.Id
-          ? this.apiService
-              .getSiteLogo(siteInfo.Id)
-              .pipe(map((logoResponse) => logoResponse.logoBase64))
-          : of(null);
         const playerContacts$ = this.apiService
           .getPlayerContacts(playerId)
           .pipe(
@@ -132,7 +107,6 @@ export class ConsentOrchestrationService {
           playerData: playerData$,
           newConsentId: newConsentId$,
           consentDefinitions: consentDefinitions$,
-          logo: logo$,
           playerContacts: playerContacts$,
           playerDocuments: playerDocuments$,
         }).pipe(
@@ -146,12 +120,9 @@ export class ConsentOrchestrationService {
               playerData,
               newConsentId,
               consentDefinitions,
-              logo,
               playerContacts,
               playerDocuments,
             } = results;
-
-            const logoLayoutType = await this.getLogoLayoutType(logo);
 
             let hasActiveContacts = false;
             if (playerContacts) {
@@ -185,10 +156,9 @@ export class ConsentOrchestrationService {
               newConsentId,
               consentDefinitions,
               siteInfo: siteInfo,
-              siteLogoBase64: logo,
+              siteLogoUrl: this.apiService.getSiteLogoUrl(siteId),
               hasActiveContacts: hasActiveContacts,
               identityDocumentString: identityDocumentString,
-              logoLayoutType: logoLayoutType,
             };
           })
         );

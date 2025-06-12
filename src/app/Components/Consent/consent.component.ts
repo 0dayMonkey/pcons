@@ -159,10 +159,9 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
       newConsentId,
       consentDefinitions,
       siteInfo,
-      siteLogoBase64,
+      siteLogoUrl,
       hasActiveContacts,
       identityDocumentString,
-      logoLayoutType,
     } = data;
 
     if (playerData) {
@@ -174,11 +173,8 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     this.casinoName = siteInfo.LongLabel;
-    if (siteLogoBase64) {
-      this.casinoLogoUrl = `data:image/png;base64,${siteLogoBase64}`;
-    }
+    this.casinoLogoUrl = siteLogoUrl;
 
-    this.logoLayoutType = logoLayoutType;
     this.consentIdToDisplayAndSubmit = newConsentId;
     this.currentConsentDefinition = consentDefinitions;
     this.rulesText = consentDefinitions.text;
@@ -195,6 +191,17 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     this.loggingService.log(
       LogLevel.INFO,
       'Initial data processed successfully.'
+    );
+  }
+
+  public onLogoLoad(imageElement: HTMLImageElement): void {
+    const isWide = imageElement.naturalWidth > imageElement.naturalHeight * 1.7;
+    this.logoLayoutType = isWide ? 'wide' : 'portrait';
+    this.cdr.detectChanges();
+    this.loggingService.log(
+      LogLevel.INFO,
+      'Logo loaded, layout type set to:',
+      this.logoLayoutType
     );
   }
 

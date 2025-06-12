@@ -1,6 +1,6 @@
 <div class="consent-container">
   <header class="player-info-header" [ngClass]="'layout--' + logoLayoutType">
-    <img [src]="casinoLogoUrl" alt="Logo du Casino" class="casino-logo-display" *ngIf="casinoLogoUrl"/>
+    <img #logoImage (load)="onLogoLoad(logoImage)" [src]="casinoLogoUrl" alt="Logo du Casino" class="casino-logo-display" *ngIf="casinoLogoUrl"/>
     <div class="casino-logo-placeholder" *ngIf="!casinoLogoUrl"></div>
 
     <div class="player-details">
@@ -49,7 +49,7 @@
     <div #rulesBody
          class="conditions-content-container"
          [style.--dynamic-font-size.px]="fontSizeManager.currentTextSizeInPx">
-      <div class="conditions-content" [innerHTML]="rulesText"></div>
+      <pre class="conditions-content" [innerHTML]="rulesText"></pre>
     </div>
   </section>
 

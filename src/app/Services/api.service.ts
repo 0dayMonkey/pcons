@@ -322,10 +322,10 @@ export class ApiService {
     return this.http.get<SiteResponse>(url, { headers: this.getHeaders() });
   }
 
-  getSiteLogo(Id: number): Observable<SiteLogoResponse> {
-    const errorCheck = this.checkApiUrl();
-    if (errorCheck) return errorCheck;
-    const url = `${this.apiUrl}api/web/setup/v1/sites/${Id}/logo`;
-    return this.http.get<SiteLogoResponse>(url, { headers: this.getHeaders() });
+  getSiteLogoUrl(siteId: number): string {
+    if (this.apiConfigError || !this.apiUrl) {
+      return '';
+    }
+    return `${this.apiUrl}api/web/setup/v1/sites/${siteId}/logo`;
   }
 }

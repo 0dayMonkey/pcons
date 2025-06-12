@@ -26,7 +26,7 @@ const PDF_CONFIG = {
     headerSubtitle: 11,
     playerInfo: 10,
     sectionTitle: 14,
-    body: 9,
+    body: 14, // Par défaut, mais nous forcerons 14pt dans le HTML
     checkboxLabel: 10,
     info: 9,
     footer: 8,
@@ -100,13 +100,36 @@ export class ConsentPdfService {
     currentY = this._drawLine(doc, currentY);
     currentY += PDF_CONFIG.spacing.section;
 
-    currentY = this._drawRules(
-      doc,
-      data.consentDefinition?.text,
-      currentY,
-      addPageIfNeeded
-    );
-    currentY += PDF_CONFIG.spacing.section;
+    // ==================================================================
+    // FIX 1 : On utilise doc.html() pour interpréter le texte du consentement
+    // et on force la police à 14pt.
+    // ==================================================================
+    if (data.consentDefinition?.text) {
+      const contentWidth =
+        doc.internal.pageSize.getWidth() - PDF_CONFIG.margin * 2;
+      const htmlContent = `<div style="font-family: helvetica; font-size: 14pt; color: ${PDF_CONFIG.colors.text}; width: <span class="math-inline">\{contentWidth\}px;"\></span>{data.consentDefinition.text}</div>`;
+
+      await doc.html(htmlContent, {
+        x: PDF_CONFIG.margin,
+        y: currentY,
+        width: contentWidth,
+        windowWidth: contentWidth,
+        autoPaging: 'slice',
+      });
+
+      currentY = (doc as any).y;
+
+      // S'assure que le contenu suivant ne chevauche pas le pied de page
+      if (
+        currentY >
+        doc.internal.pageSize.getHeight() - (PDF_CONFIG.margin + 20)
+      ) {
+        doc.addPage();
+        currentY = PDF_CONFIG.margin;
+      } else {
+        currentY += PDF_CONFIG.spacing.section / 2;
+      }
+    }
 
     currentY = this._drawSectionTitle(
       doc,
@@ -196,12 +219,17 @@ export class ConsentPdfService {
     y: number,
     addPageIfNeeded: (h: number, y: number) => number
   ): number {
+    // ==================================================================
+    // FIX 2 : Sécurité pour empêcher le crash si la traduction n'est pas prête.
+    // ==================================================================
+    const titleText = typeof title === 'string' ? title : '';
+
     y = addPageIfNeeded(PDF_CONFIG.fontSizes.sectionTitle / 2, y);
     doc
       .setFontSize(PDF_CONFIG.fontSizes.sectionTitle)
       .setFont('helvetica', 'bold')
       .setTextColor(PDF_CONFIG.colors.text);
-    doc.text(title, PDF_CONFIG.margin, y);
+    doc.text(titleText, PDF_CONFIG.margin, y);
     return y + PDF_CONFIG.spacing.afterSectionTitle;
   }
 
@@ -215,456 +243,3 @@ export class ConsentPdfService {
         doc.internal.pageSize.getWidth() - PDF_CONFIG.margin,
         y
       );
-    return y;
-  }
-
-  private _drawRules(
-    doc: jsPDF,
-    rulesText: string | undefined,
-    y: number,
-    addPageIfNeeded: (h: number, y: number) => number
-  ): number {
-    y = addPageIfNeeded(PDF_CONFIG.fontSizes.body / 2, y);
-    doc
-      .setFontSize(PDF_CONFIG.fontSizes.body)
-      .setFont('helvetica', 'normal')
-      .setTextColor(PDF_CONFIG.colors.text);
-    const text = rulesText ?? 'N/A';
-    const contentWidth =
-      doc.internal.pageSize.getWidth() - 2 * PDF_CONFIG.margin;
-    const splitText = doc.splitTextToSize(text, contentWidth);
-
-    for (const line of splitText) {
-      y = addPageIfNeeded(PDF_CONFIG.spacing.line, y);
-      doc.text(line, PDF_CONFIG.margin, y);
-      y += PDF_CONFIG.spacing.line;
-    }
-    return y;
-  }
-
-  private _drawCheckbox(
-    doc: jsPDF,
-    textKeys: { bold: string; normal: string },
-    isChecked: boolean,
-    isRequired: boolean,
-    y: number,
-    addPageIfNeeded: (h: number, y: number) => number
-  ): number {
-    const checkboxTextX = PDF_CONFIG.margin + PDF_CONFIG.checkboxSize + 2;
-    const contentWidth =
-      doc.internal.pageSize.getWidth() - PDF_CONFIG.margin - checkboxTextX;
-
-    doc.setFontSize(PDF_CONFIG.fontSizes.checkboxLabel);
-
-    const boldText = this.translate.instant(textKeys.bold);
-    const normalText = this.translate.instant(textKeys.normal);
-    const fullText = isRequired
-      ? `* ${boldText} ${normalText} ${this.translate.instant(
-          'generic.requiredText'
-        )}`
-      : `${boldText} ${normalText}`;
-    const textLines = doc.splitTextToSize(fullText, contentWidth);
-
-    const requiredHeight =
-      textLines.length * PDF_CONFIG.spacing.checkboxLineHeight;
-    y = addPageIfNeeded(requiredHeight, y);
-
-    const initialY = y;
-
-    doc
-      .setDrawColor(PDF_CONFIG.colors.text)
-      .setLineWidth(0.3)
-      .rect(
-        PDF_CONFIG.margin,
-        initialY,
-        PDF_CONFIG.checkboxSize,
-        PDF_CONFIG.checkboxSize,
-        'S'
-      );
-    if (isChecked) {
-      doc.setLineWidth(0.5);
-      doc.line(
-        PDF_CONFIG.margin + 0.8,
-        initialY + 2,
-        PDF_CONFIG.margin + 1.6,
-        initialY + 2.8
-      );
-      doc.line(
-        PDF_CONFIG.margin + 1.6,
-        initialY + 2.8,
-        PDF_CONFIG.margin + 3.2,
-        initialY + 1.2
-      );
-    }
-
-    let textY =
-      initialY +
-      PDF_CONFIG.checkboxSize / 2 -
-      PDF_CONFIG.spacing.checkboxLineHeight / 2 +
-      1.5;
-    let currentX = checkboxTextX;
-
-    if (isRequired) {
-      doc.setTextColor(PDF_CONFIG.colors.required).setFont('helvetica', 'bold');
-      doc.text('*', currentX, textY);
-      currentX += doc.getTextWidth('*');
-    }
-
-    doc.setTextColor(PDF_CONFIG.colors.text).setFont('helvetica', 'bold');
-    doc.text(boldText, currentX, textY);
-    currentX += doc.getTextWidth(boldText);
-
-    const remainingText = ` ${normalText}`;
-    const requiredText = isRequired
-      ? ` ${this.translate.instant('generic.requiredText')}`
-      : '';
-
-    doc.setFont('helvetica', 'italic');
-    const requiredTextWidth = doc.getTextWidth(requiredText);
-    doc.setFont('helvetica', 'normal');
-
-    const remainingWidth =
-      doc.internal.pageSize.getWidth() -
-      PDF_CONFIG.margin -
-      currentX -
-      requiredTextWidth;
-    const splitRemaining = doc.splitTextToSize(remainingText, remainingWidth);
-
-    for (let i = 0; i < splitRemaining.length; i++) {
-      const line = splitRemaining[i];
-      if (i > 0) {
-        textY += PDF_CONFIG.spacing.checkboxLineHeight;
-        currentX = checkboxTextX;
-      }
-      doc.text(line, currentX, textY);
-      currentX += doc.getTextWidth(line);
-    }
-
-    if (isRequired) {
-      doc
-        .setFont('helvetica', 'italic')
-        .setTextColor(PDF_CONFIG.colors.required);
-      doc.text(requiredText, currentX, textY);
-    }
-
-    return initialY + requiredHeight;
-  }
-
-  private async _drawSignatureAndInfo(
-    doc: jsPDF,
-    data: PdfGenerationData,
-    y: number,
-    addPageIfNeeded: (h: number, y: number) => number
-  ): Promise<number> {
-    y = addPageIfNeeded(PDF_CONFIG.signatureBox.height, y);
-
-    try {
-      const optimizedUrl =
-        await this.signaturePadService.getResizedSignatureDataUrl(
-          data.signaturePadCanvas.nativeElement
-        );
-      const signatureImg =
-        await this.signaturePadService.getSignatureWithWhiteBackground(
-          optimizedUrl
-        );
-      if (signatureImg) {
-        doc.addImage(
-          signatureImg,
-          'PNG',
-          PDF_CONFIG.margin,
-          y,
-          PDF_CONFIG.signatureBox.width,
-          PDF_CONFIG.signatureBox.height
-        );
-      }
-    } catch (e) {
-      this._drawPlaceholder(
-        doc,
-        {
-          x: PDF_CONFIG.margin,
-          y,
-          width: PDF_CONFIG.signatureBox.width,
-          height: PDF_CONFIG.signatureBox.height,
-        },
-        this.translate.instant('consent.pdf.signatureNotProvided')
-      );
-    }
-
-    const infoX = PDF_CONFIG.margin + PDF_CONFIG.signatureBox.width + 10;
-    let infoY = y + 5;
-
-    const now = new Date();
-    const validUntil = new Date(now);
-    validUntil.setFullYear(
-      now.getFullYear() + (data.consentDefinition?.consentYearsDuration ?? 1)
-    );
-
-    const drawInfoLine = (labelKey: string, value: string) => {
-      doc.setFontSize(PDF_CONFIG.fontSizes.info);
-      doc
-        .setFont('helvetica', 'normal')
-        .setTextColor(PDF_CONFIG.colors.subtitle);
-      doc.text(this.translate.instant(labelKey), infoX, infoY);
-      infoY += 5;
-      doc.setFont('helvetica', 'bold').setTextColor(PDF_CONFIG.colors.text);
-      doc.text(value, infoX, infoY);
-      infoY += 7;
-    };
-
-    drawInfoLine('consent.pdf.consentDateLabel', now.toLocaleString('fr-FR'));
-    drawInfoLine(
-      'consent.pdf.validUntilLabel',
-      validUntil.toLocaleDateString('fr-FR')
-    );
-    drawInfoLine(
-      'consent.pdf.versionLabel',
-      data.consentDefinition?.version?.toString() ?? 'N/A'
-    );
-
-    return y + PDF_CONFIG.signatureBox.height;
-  }
-
-  private async _drawHeader(
-    doc: jsPDF,
-    data: PdfGenerationData,
-    y: number
-  ): Promise<number> {
-    if (data.layoutType === 'wide') {
-      return this._drawWideHeader(doc, data, y);
-    }
-    return this._drawPortraitHeader(doc, data, y);
-  }
-
-  private async _drawPortraitHeader(
-    doc: jsPDF,
-    data: PdfGenerationData,
-    y: number
-  ): Promise<number> {
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const contentWidth = pageWidth - 2 * PDF_CONFIG.margin;
-    const logoBounds = {
-      x: PDF_CONFIG.margin,
-      y: y,
-      maxWidth: 35,
-      maxHeight: 35,
-    };
-
-    if (data.casinoLogoUrl) {
-      await this._drawImage(doc, data.casinoLogoUrl, logoBounds);
-    } else {
-      this._drawPlaceholder(
-        doc,
-        { ...logoBounds, width: 35, height: 35 },
-        this.translate.instant('consent.pdf.logoPlaceholder')
-      );
-    }
-
-    const titleTextX = PDF_CONFIG.margin + 35 + 5;
-    doc
-      .setFont('helvetica', 'bold')
-      .setFontSize(PDF_CONFIG.fontSizes.headerTitle)
-      .setTextColor(PDF_CONFIG.colors.text);
-    doc.text(this.translate.instant('consent.pdf.title'), titleTextX, y, {
-      baseline: 'top',
-    });
-
-    const titleDim = doc.getTextDimensions(
-      this.translate.instant('consent.pdf.title'),
-      { fontSize: PDF_CONFIG.fontSizes.headerTitle }
-    );
-    const subtitleY = y + titleDim.h + 2;
-    doc
-      .setFont('helvetica', 'normal')
-      .setFontSize(PDF_CONFIG.fontSizes.headerSubtitle)
-      .setTextColor(PDF_CONFIG.colors.subtitle);
-    doc.text(data.casinoName, titleTextX, subtitleY, { baseline: 'top' });
-
-    let infoY =
-      subtitleY +
-      doc.getTextDimensions(data.casinoName, {
-        fontSize: PDF_CONFIG.fontSizes.headerSubtitle,
-      }).h +
-      4;
-
-    const drawInfo = (labelKey: string, value: string) => {
-      doc
-        .setFont('helvetica', 'bold')
-        .setFontSize(PDF_CONFIG.fontSizes.playerInfo)
-        .setTextColor(PDF_CONFIG.colors.text);
-      const label = this.translate.instant(labelKey);
-      doc.text(label, titleTextX, infoY);
-      const labelWidth = doc.getTextWidth(label);
-      doc.setFont('helvetica', 'normal');
-      doc.text(value, titleTextX + labelWidth + 2, infoY, {
-        maxWidth:
-          contentWidth - (titleTextX - PDF_CONFIG.margin) - labelWidth - 2,
-      });
-      infoY += PDF_CONFIG.fontSizes.playerInfo * 0.5 + 2;
-    };
-
-    drawInfo('consent.pdf.lastNameLabel', data.lastName);
-    drawInfo('consent.pdf.firstNameLabel', data.firstName);
-    drawInfo('consent.pdf.identityDocumentLabel', data.documentIdInfo);
-
-    return (
-      Math.max(y + logoBounds.maxHeight, infoY) +
-      PDF_CONFIG.spacing.headerBottom
-    );
-  }
-
-  private async _drawWideHeader(
-    doc: jsPDF,
-    data: PdfGenerationData,
-    y: number
-  ): Promise<number> {
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const contentWidth = pageWidth - 2 * PDF_CONFIG.margin;
-    const logoBounds = {
-      x: PDF_CONFIG.margin,
-      y: y,
-      maxWidth: contentWidth,
-      maxHeight: 35,
-    };
-
-    if (data.casinoLogoUrl) {
-      y = await this._drawImage(doc, data.casinoLogoUrl, logoBounds);
-    } else {
-      this._drawPlaceholder(
-        doc,
-        { ...logoBounds, width: contentWidth, height: 35 },
-        this.translate.instant('consent.pdf.logoPlaceholder')
-      );
-      y += 35;
-    }
-    y += PDF_CONFIG.spacing.headerBottom;
-
-    doc
-      .setFont('helvetica', 'bold')
-      .setFontSize(PDF_CONFIG.fontSizes.headerTitle)
-      .setTextColor(PDF_CONFIG.colors.text);
-    doc.text(this.translate.instant('consent.pdf.title'), pageWidth / 2, y, {
-      align: 'center',
-    });
-    y += doc.getTextDimensions('T', {
-      fontSize: PDF_CONFIG.fontSizes.headerTitle,
-    }).h;
-
-    doc
-      .setFont('helvetica', 'normal')
-      .setFontSize(PDF_CONFIG.fontSizes.headerSubtitle)
-      .setTextColor(PDF_CONFIG.colors.subtitle);
-    doc.text(data.casinoName, pageWidth / 2, y, { align: 'center' });
-    y +=
-      doc.getTextDimensions('T', {
-        fontSize: PDF_CONFIG.fontSizes.headerSubtitle,
-      }).h + 5;
-
-    const drawInfo = (labelKey: string, value: string) => {
-      doc
-        .setFont('helvetica', 'bold')
-        .setFontSize(PDF_CONFIG.fontSizes.playerInfo)
-        .setTextColor(PDF_CONFIG.colors.text);
-      const label = this.translate.instant(labelKey);
-      doc.text(label, PDF_CONFIG.margin, y);
-      const labelWidth = doc.getTextWidth(label);
-      doc.setFont('helvetica', 'normal');
-      doc.text(value, PDF_CONFIG.margin + labelWidth + 2, y);
-      y += PDF_CONFIG.fontSizes.playerInfo * 0.5 + 1.5;
-    };
-
-    drawInfo('consent.pdf.lastNameLabel', data.lastName);
-    drawInfo('consent.pdf.firstNameLabel', data.firstName);
-    drawInfo('consent.pdf.identityDocumentLabel', data.documentIdInfo);
-
-    return y + PDF_CONFIG.spacing.headerBottom;
-  }
-
-  private _drawPlaceholder(
-    doc: jsPDF,
-    bounds: { x: number; y: number; width: number; height: number },
-    text: string
-  ): void {
-    doc
-      .setFillColor(PDF_CONFIG.colors.placeholder)
-      .rect(bounds.x, bounds.y, bounds.width, bounds.height, 'F');
-    doc.setFontSize(8).setTextColor(PDF_CONFIG.colors.placeholderText);
-    doc.text(text, bounds.x + bounds.width / 2, bounds.y + bounds.height / 2, {
-      align: 'center',
-      baseline: 'middle',
-    });
-  }
-
-  private async _drawImage(
-    doc: jsPDF,
-    dataUrl: string,
-    bounds: { x: number; y: number; maxWidth: number; maxHeight: number }
-  ): Promise<number> {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.crossOrigin = 'Anonymous';
-      img.src = dataUrl;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        const ctx = canvas.getContext('2d');
-
-        if (!ctx) {
-          this._drawPlaceholder(
-            doc,
-            {
-              x: bounds.x,
-              y: bounds.y,
-              width: bounds.maxWidth,
-              height: bounds.maxHeight,
-            },
-            this.translate.instant('consent.pdf.logoPlaceholder')
-          );
-          return resolve(bounds.y + bounds.maxHeight);
-        }
-        ctx.drawImage(img, 0, 0);
-
-        const aspectRatio = img.naturalWidth / img.naturalHeight;
-        let imgWidth = bounds.maxWidth;
-        let imgHeight = imgWidth / aspectRatio;
-        if (imgHeight > bounds.maxHeight) {
-          imgHeight = bounds.maxHeight;
-          imgWidth = imgHeight * aspectRatio;
-        }
-        const xPos = bounds.x + (bounds.maxWidth - imgWidth) / 2;
-        const yPos = bounds.y + (bounds.maxHeight - imgHeight) / 2;
-        const format = dataUrl.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG';
-
-        try {
-          doc.addImage(canvas, format, xPos, yPos, imgWidth, imgHeight);
-        } catch (e) {
-          console.error('jsPDF addImage failed:', e);
-          this._drawPlaceholder(
-            doc,
-            {
-              x: bounds.x,
-              y: bounds.y,
-              width: bounds.maxWidth,
-              height: bounds.maxHeight,
-            },
-            this.translate.instant('consent.pdf.logoPlaceholder')
-          );
-        }
-        resolve(bounds.y + bounds.maxHeight);
-      };
-      img.onerror = () => {
-        this._drawPlaceholder(
-          doc,
-          {
-            x: bounds.x,
-            y: bounds.y,
-            width: bounds.maxWidth,
-            height: bounds.maxHeight,
-          },
-          this.translate.instant('consent.pdf.logoPlaceholder')
-        );
-        resolve(bounds.y + bounds.maxHeight);
-      };
-    });
-  }
-}
