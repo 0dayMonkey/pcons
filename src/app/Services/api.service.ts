@@ -100,16 +100,16 @@ export interface PlayerData {
 
 export interface SiteResponse {
   companyId: string;
-  SiteCode: string;
-  Id: number;
-  LongLabel: string;
+  siteCode: string;
+  id: number;
+  longLabel: string;
   shortLabel: string;
   direction: string;
   languageId: string;
   minimumAge: number;
   lastUpdatedTimestamp?: Date;
   cashlessMode: any;
-  masterCasino?: number;
+  masterSiteId?: number;
   isOverMinimumAge: boolean;
   userId?: string;
 }

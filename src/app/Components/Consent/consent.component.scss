@@ -79,7 +79,7 @@
       aspect-ratio: 1/1;
       align-self: center;
       flex-shrink: 0;
-      
+
       @media (min-width: 1024px) {
         width: clamp(80px, 12vw, 220px);
       }
@@ -101,8 +101,9 @@
     align-items: stretch;
 
     .casino-logo-display, .casino-logo-placeholder {
-      width: clamp(2000px, 500vw, 4500px);
+      width: clamp(200px, 50vw, 450px);
       max-height: 300px;
+      max-width: 700px;
       aspect-ratio: auto;
       margin-bottom: var(--spacing-lg);
       align-self: center;
@@ -284,19 +285,81 @@
   @media (min-width: 1024px) {
     padding: var(--spacing-lg);
   }
-}
+  
+  ::ng-deep .conditions-content {
+    font-size: var(--dynamic-font-size, var(--text-base));
+    word-wrap: break-word;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    font-family: inherit;
+    margin: 0;
+    color: #374151;
+    line-height: clamp(1.3, 1.2 + (var(--dynamic-font-size, 16px) / 80), 1.6);
+    width: 100%;
+    white-space: normal;
 
-.conditions-section .conditions-content-container .conditions-content {
-  font-size: var(--dynamic-font-size, var(--text-base));
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  word-break: break-word;
-  overflow-wrap: break-word;
-  font-family: inherit;
-  margin: 0;
-  color: #374151;
-  line-height: clamp(1.3, 1.2 + (var(--dynamic-font-size, 16px) / 80), 1.6);
-  width: 100%;
+    h1 {
+      font-size: 1.2em;
+      font-weight: 700;
+      margin: 0 0 var(--spacing-md) 0;
+    }
+
+    h2 {
+      font-size: 1.1em;
+      font-weight: 600;
+      margin: var(--spacing-md) 0 var(--spacing-sm) 0;
+    }
+
+    p {
+      margin: 0 0 var(--spacing-sm) 0;
+    }
+
+    strong {
+      font-weight: 700;
+    }
+
+    em {
+      font-style: italic;
+    }
+
+    u {
+      text-decoration: underline;
+    }
+
+    .ql-align-center {
+      text-align: center;
+    }
+    .ql-align-right {
+      text-align: right;
+    }
+    .ql-align-justify {
+      text-align: justify;
+    }
+
+    .ql-font-serif {
+      font-family: Georgia, 'Times New Roman', Times, serif;
+    }
+    .ql-font-monospace {
+      font-family: 'Courier New', Courier, monospace;
+    }
+
+    ul, ol {
+      padding-left: 2rem;
+      margin: 0 0 var(--spacing-sm) 0;
+    }
+
+    li {
+      margin-bottom: var(--spacing-xs);
+    }
+
+    a {
+      color: #2563eb;
+      text-decoration: underline;
+      &:hover {
+        color: #1d4ed8;
+      }
+    }
+  }
 }
 
 .consent-actions-footer {

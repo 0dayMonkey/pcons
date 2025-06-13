@@ -26,6 +26,7 @@ import { ConfigService } from '../../Services/config.service';
 import { FontSizeManagerService } from '../../Services/font-size-manager.service';
 import { UiInteractionService } from '../../Services/ui-interaction.service';
 import { Subject, takeUntil } from 'rxjs';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-consent',
@@ -41,6 +42,7 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   lastName: string = '';
   documentIdInfo: string = '';
   rulesText: string = '';
+  safeRulesText: SafeHtml = '';
   mandatoryCheckbox: boolean = false;
   optionalCheckbox: boolean = false;
   isCommunicationCheckboxDisabled: boolean = true;
@@ -79,10 +81,13 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     private loggingService: LoggingService,
     private configService: ConfigService,
     public fontSizeManager: FontSizeManagerService,
-    public uiInteractionService: UiInteractionService
+    public uiInteractionService: UiInteractionService,
+    private sanitizer: DomSanitizer
   ) {
     this.validationPopupMessage = this.translate.instant('alert.thankYou');
-    this.rulesText = this.translate.instant('generic.loading');
+    const loadingText = this.translate.instant('generic.loading');
+    this.rulesText = loadingText;
+    this.safeRulesText = this.sanitizer.bypassSecurityTrustHtml(loadingText);
   }
 
   ngOnInit(): void {
@@ -95,7 +100,9 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     });
 
     if (!this.currentPlayerId || !siteId) {
-      this.rulesText = this.translate.instant('generic.apiError');
+      const apiErrorText = this.translate.instant('generic.apiError');
+      this.rulesText = apiErrorText;
+      this.safeRulesText = this.sanitizer.bypassSecurityTrustHtml(apiErrorText);
       this.isLoadingInitialData = false;
       this.loggingService.log(
         LogLevel.ERROR,
@@ -128,7 +135,10 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
       .subscribe({
         next: (results) => {
           if (!results) {
-            this.rulesText = this.translate.instant('generic.apiError');
+            const apiErrorText = this.translate.instant('generic.apiError');
+            this.rulesText = apiErrorText;
+            this.safeRulesText =
+              this.sanitizer.bypassSecurityTrustHtml(apiErrorText);
             this.isLoadingInitialData = false;
             this.cdr.detectChanges();
             this.loggingService.log(
@@ -141,7 +151,10 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
           this.processInitialData(results);
         },
         error: (err) => {
-          this.rulesText = this.translate.instant('generic.apiError');
+          const apiErrorText = this.translate.instant('generic.apiError');
+          this.rulesText = apiErrorText;
+          this.safeRulesText =
+            this.sanitizer.bypassSecurityTrustHtml(apiErrorText);
           this.isLoadingInitialData = false;
           this.cdr.detectChanges();
           this.loggingService.log(
@@ -172,12 +185,21 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
       this.documentIdInfo = identityDocumentString || ' ';
     }
 
-    this.casinoName = siteInfo.LongLabel;
+    if (siteInfo && siteInfo.longLabel) {
+      this.casinoName = siteInfo.longLabel;
+    } else {
+      this.loggingService.log(
+        LogLevel.ERROR,
+        'Le nom du casino est manquant dans l objet siteInfo de l API.',
+        { siteInfo }
+      );
+    }
     this.casinoLogoUrl = siteLogoUrl;
 
     this.consentIdToDisplayAndSubmit = newConsentId;
     this.currentConsentDefinition = consentDefinitions;
     this.rulesText = consentDefinitions.text;
+    this.safeRulesText = this.sanitizer.bypassSecurityTrustHtml(this.rulesText);
     this.consentDefinitionIdToSubmit = consentDefinitions.id;
     this.definitionUserIdApi = consentDefinitions.userId || null;
     this.isCommunicationCheckboxDisabled = !hasActiveContacts;
@@ -288,6 +310,20 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     );
   }
 
+  public handleContentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    const anchorElement = target.closest('a');
+
+    if (anchorElement) {
+      event.preventDefault();
+      this.loggingService.log(
+        LogLevel.INFO,
+        'Navigation link click prevented.',
+        { href: anchorElement.href }
+      );
+    }
+  }
+
   async onSubmit(): Promise<void> {
     if (!this.isSubmitEnabled() || this.buttonState !== 'idle') {
       if (this.buttonState !== 'idle') return;
@@ -369,7 +405,9 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     this.clearSignature();
     this.hasReachedBottomOnce = false;
     this.setTextSize('medium');
-    this.rulesText = this.translate.instant('generic.loading');
+    const loadingText = this.translate.instant('generic.loading');
+    this.rulesText = loadingText;
+    this.safeRulesText = this.sanitizer.bypassSecurityTrustHtml(loadingText);
     this.consentIdToDisplayAndSubmit = '';
     this.currentConsentDefinition = null;
     this.isLoadingInitialData = true;

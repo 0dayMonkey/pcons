@@ -49,7 +49,9 @@
     <div #rulesBody
          class="conditions-content-container"
          [style.--dynamic-font-size.px]="fontSizeManager.currentTextSizeInPx">
-      <pre class="conditions-content" [innerHTML]="rulesText"></pre>
+      <div class="conditions-content" 
+           [innerHTML]="safeRulesText" 
+           (click)="handleContentClick($event)"></div>
     </div>
   </section>
 
