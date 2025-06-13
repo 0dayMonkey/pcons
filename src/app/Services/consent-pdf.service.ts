@@ -162,7 +162,7 @@ export class ConsentPdfService {
     const SERIF_FONT_NAME = this.fontsLoaded ? 'Georgia' : 'times';
     const MONO_FONT_NAME = this.fontsLoaded ? 'Courier' : 'courier';
     const LINE_HEIGHT_RATIO = 1.4;
-    const LIST_INDENT_WIDTH = 5;
+    const LIST_INDENT_WIDTH = 8;
     const HEADING_SPACING = 3;
 
     const instructions: DrawInstruction[] = [];
@@ -383,7 +383,8 @@ export class ConsentPdfService {
       currentLineHeight = 0;
       currentX = x;
     };
-
+    let justDrawnBullet = false;
+    let bulletTextStartX = x;
     for (const instruction of instructions) {
       if (
         instruction.type === 'text' &&
@@ -414,12 +415,18 @@ export class ConsentPdfService {
             currentX + bufferWidth + width > x + options.width
           ) {
             flushLine();
+            justDrawnBullet = false;
           }
 
           if (lineBuffer.length === 0) {
-            currentX = x;
-            if (instruction.indent !== undefined) {
-              currentX += instruction.indent;
+            if (justDrawnBullet) {
+              currentX = bulletTextStartX;
+              justDrawnBullet = false;
+            } else {
+              currentX = x;
+              if (instruction.indent !== undefined) {
+                currentX += instruction.indent;
+              }
             }
           }
 
@@ -433,6 +440,7 @@ export class ConsentPdfService {
         flushLine();
         if (instruction.spacing) currentY += instruction.spacing;
         currentX = x;
+        justDrawnBullet = false;
       } else if (
         instruction.type === 'bullet' &&
         instruction.content &&
@@ -442,6 +450,7 @@ export class ConsentPdfService {
         const styles = instruction.styles;
         currentLineHeight = styles.fontSize * 0.352778 * LINE_HEIGHT_RATIO;
         currentY = addPageIfNeeded(currentLineHeight, currentY);
+
         const style: FontStyle = styles.isBold
           ? styles.isItalic
             ? 'bolditalic'
@@ -449,20 +458,25 @@ export class ConsentPdfService {
           : styles.isItalic
           ? 'italic'
           : 'normal';
+
         doc.setFont(styles.fontName, style);
         doc.setFontSize(styles.fontSize);
+        doc.setTextColor(styles.color);
 
         const bulletX = x + (instruction.indent || 0);
-        const bulletText = instruction.content + ' ';
+        const bulletSpacing = 4;
 
         doc.text(
-          bulletText,
+          instruction.content,
           bulletX,
           currentY + (currentLineHeight * 0.7) / 2,
           { baseline: 'middle' }
         );
-        const bulletWidth = doc.getTextWidth(bulletText);
-        currentX = bulletX + bulletWidth;
+
+        const bulletWidth = doc.getTextWidth(instruction.content);
+        bulletTextStartX = bulletX + bulletWidth + bulletSpacing;
+        currentX = bulletTextStartX;
+        justDrawnBullet = true;
       } else if (
         instruction.type === 'pre' &&
         instruction.content &&
