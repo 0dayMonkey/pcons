@@ -77,7 +77,7 @@ export interface ConsentDefinitionResponse {
 }
 
 export interface LocationRef {
-  type: string;
+  locationType: string;
   id: string;
 }
 
@@ -136,7 +136,7 @@ export interface CustomerContactResponse {
 
 export interface IdDocTypeRef {
   id: string;
-  label: string;
+  longLabel: string;
 }
 
 export interface CountryRef {
@@ -310,9 +310,11 @@ export class ApiService {
     if (errorCheck) return errorCheck;
 
     const url = `${this.apiUrl}api/web/v1/players/${playerId}/consents`;
-    let headers = this.getHeaders();
-    headers = headers.append('Site-Origin-ID', this.configService.getSiteId());
-    return this.http.post(url, consentData, { headers: headers });
+    const header = this.getHeaders().append(
+      'Site-Origin-ID',
+      this.configService.getSiteId()
+    );
+    return this.http.post(url, consentData, { headers: header });
   }
 
   getSite(siteId: number): Observable<SiteResponse> {

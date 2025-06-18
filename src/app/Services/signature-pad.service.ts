@@ -149,7 +149,7 @@ export class SignaturePadService {
             );
           }
         }
-        resolve(finalCanvas.toDataURL('image/png'));
+        resolve(finalCanvas.toDataURL('image/jpeg', 0.8));
       };
       imageWithStrokesOnly.onerror = () => {
         resolve(null);
@@ -179,7 +179,7 @@ export class SignaturePadService {
           ctx.fillStyle = 'white';
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(image, 0, 0);
-          resolve(canvas.toDataURL('image/png'));
+          resolve(canvas.toDataURL('image/jpeg', 0.8));
         } else {
           resolve(null);
         }

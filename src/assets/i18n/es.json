@@ -1,24 +1,24 @@
 {
   "generic": {
     "loading": "Cargando...",
-    "na": "N/D",
+    "na": "N/A",
     "requiredMarker": "*",
     "requiredText": "Requerido",
     "error": "Error",
-    "playerID": "ID del jugador",
+    "playerID": "ID de Jugador",
     "apiError": "Error de API"
   },
   "consent": {
     "playerInfoTitle": "Información del Jugador",
     "lastNameLabel": "Apellido",
     "firstNameLabel": "Nombre",
-    "birthDateLabel": "Nacido el:",
-    "privacyPolicyTitle": "Política de Privacidad",
+    "birthDateLabel": "Fecha de nacimiento:",
+    "privacyPolicyTitle": "Protección de la privacidad",
     "consentLabel": "Consentimiento:",
-    "consentDeclarationText": " Usted declara haber leído lo anterior y da su consentimiento, en la medida necesaria, al contenido de este párrafo.",
+    "consentDeclarationText": "Usted declara haber leído lo anterior y da su consentimiento, en la medida necesaria, al contenido de este párrafo.",
     "optionalCommunicationsLabelBold": "Comunicaciones:",
-    "optionalCommunicationsLabelText": " Desea ser informado de las actividades comerciales y sociales del Operador por comunicaciones electrónicas (SMS, correo electrónico, redes sociales...). Tendrá la posibilidad de darse de baja en cualquier momento.",
-    "signatureLabel": "Firma manuscrita",
+    "optionalCommunicationsLabelText": "Desea ser informado de las actividades comerciales y sociales del Operador a través de comunicaciones electrónicas (SMS, e-mail, redes sociales...). Tendrá la posibilidad de darse de baja en cualquier momento.",
+    "signatureLabel": "Firma Manuscrita",
     "clearButton": "Borrar",
     "validateButton": {
       "idle": "Validar"
@@ -28,20 +28,20 @@
       "lastNameLabel": "Apellido:",
       "firstNameLabel": "Nombre:",
       "birthDateLabel": "Fecha de nacimiento:",
-      "playerIDLabel": "ID del jugador:",
+      "playerIDLabel": "ID de Jugador:",
       "photoPlaceholder": "Foto",
-      "agreementsTitle": "Consentimientos otorgados",
+      "agreementsTitle": "Acuerdos Otorgados",
       "consentLabel": "Consentimiento:",
-      "mainDeclaration": "Usted declara que ha leído lo anterior y da su consentimiento, en la medida necesaria, al contenido de este párrafo.",
+      "mainDeclaration": "Usted declara haber leído lo anterior y da su consentimiento, en la medida necesaria, al contenido de este párrafo.",
       "communicationsLabel": "Comunicaciones:",
       "signatureInfoTitle": "Firma e información",
       "signatureNotProvided": "Firma no proporcionada",
-      "consentDateLabel": "Fecha del consentimiento:",
+      "consentDateLabel": "Fecha de consentimiento:",
       "validUntilLabel": "Válido hasta:",
-      "consentIdLabel": "ID del consentimiento:",
+      "consentIdLabel": "ID de consentimiento:",
       "pagePrefixLabel": "Página ",
       "pageSeparatorLabel": " de ",
-      "identityDocumentLabel": "Documento de identidad :",
+      "identityDocumentLabel": "Documento de identidad:",
       "logoPlaceholder": "Logo",
       "versionLabel": "Versión"
     }
@@ -49,11 +49,12 @@
   "alert": {
     "validationImpossible": "Validación imposible:",
     "mustReadConditions": "- Por favor, lea todas las condiciones.",
-    "mandatoryCheckboxRequired": "- La casilla de consentimiento obligatorio debe estar marcada.",
-    "signatureRequired": "- Se requiere una firma.",
+    "mandatoryCheckboxRequired": "- La casilla de consentimiento obligatorio debe ser marcada.",
+    "signatureRequired": "- La firma es requerida.",
+    "thankYouTitle": "Consentimiento validado",
     "thankYou": "¡Gracias por su confianza!",
-    "pdfUploadError": "Error al subir el PDF al servidor:",
-    "pdfUploadErrorDetail": "Error al subir el PDF al servidor. Revise la consola para más detalles.",
+    "pdfUploadError": "Error al enviar el PDF al servidor:",
+    "pdfUploadErrorDetail": "Error al enviar el PDF al servidor. Revise la consola para más detalles.",
     "pdfGenerationError": "Error al generar el PDF."
   }
 }

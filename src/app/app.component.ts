@@ -16,6 +16,8 @@ import {
 } from './Services/websocket.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { ConfigService } from './Services/config.service';
+import { ConsentComponent } from './Components/Consent/consent.component';
+import { ConsentOrchestrationService } from './Services/consent-orchestration.service';
 
 @Component({
   selector: 'app-root',
@@ -29,6 +31,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private listeners: Array<() => void> = [];
   private destroy$ = new ReplaySubject<void>(1);
   private initialLaunchParamsProcessed = false;
+  private activatedComponent: any;
 
   constructor(
     private renderer: Renderer2,
@@ -37,7 +40,8 @@ export class AppComponent implements OnInit, OnDestroy {
     private activatedRoute: ActivatedRoute,
     private webSocketService: AppWebSocketService,
     private translate: TranslateService,
-    private configService: ConfigService
+    private configService: ConfigService,
+    private orchestrationService: ConsentOrchestrationService
   ) {
     translate.setDefaultLang('fr');
   }
@@ -182,15 +186,28 @@ export class AppComponent implements OnInit, OnDestroy {
           }
 
           if (message.Action === 'Consent' && message.PlayerId) {
-            this.router.navigate(['/consent', message.PlayerId], {
-              queryParams: {},
-              skipLocationChange: true,
-            });
+            const isConsentActive =
+              this.activatedComponent instanceof ConsentComponent;
+
+            if (isConsentActive) {
+              this.orchestrationService.requestNewConsent(message.PlayerId);
+            } else {
+              this.router.navigate(['/consent', message.PlayerId], {
+                queryParams: {},
+                skipLocationChange: true,
+              });
+            }
           } else if (message.Action === 'Idle') {
-            this.router.navigate(['/logo'], {
-              queryParams: {},
-              skipLocationChange: true,
-            });
+            const isPopupShowing =
+              this.activatedComponent instanceof ConsentComponent &&
+              this.activatedComponent.showValidationPopup === true;
+
+            if (!isPopupShowing) {
+              this.router.navigate(['/logo'], {
+                queryParams: {},
+                skipLocationChange: true,
+              });
+            }
           }
         }
       });
@@ -254,6 +271,10 @@ export class AppComponent implements OnInit, OnDestroy {
     } else if ((elem as any).msRequestFullscreen) {
       (elem as any).msRequestFullscreen();
     }
+  }
+
+  onActivate(component: any): void {
+    this.activatedComponent = component;
   }
 
   onKeydownHandler(event: KeyboardEvent): void {

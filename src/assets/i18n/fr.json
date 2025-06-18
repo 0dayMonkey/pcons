@@ -51,6 +51,7 @@
     "mustReadConditions": "- Veuillez lire toutes les conditions.",
     "mandatoryCheckboxRequired": "- La case de consentement obligatoire doit être cochée.",
     "signatureRequired": "- La signature est requise.",
+    "thankYouTitle" : "Consentement validé",
     "thankYou": "Merci de votre confiance !",
     "pdfUploadError": "Erreur lors de l'envoi du PDF au serveur:",
     "pdfUploadErrorDetail": "Erreur lors de l'envoi du PDF au serveur. Vérifiez la console pour plus de détails.",

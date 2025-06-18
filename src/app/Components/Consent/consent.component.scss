@@ -554,9 +554,11 @@
 }
 
 .validate-button .checkmark-icon {
-  width: clamp(16px, 3vw, 22px);
-  height: clamp(16px, 3vw, 22px);
+  width: clamp(20px, 4vw, 28px);
+  height: clamp(20px, 4vw, 28px);
   color: white;
+  transform: scale(0);
+  animation: popIn 0.3s 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
 @keyframes spin {
@@ -565,15 +567,14 @@
   }
 }
 
-@keyframes fadeInScaleUp {
-  0% {
-    opacity: 0;
-    transform: scale(0.9) translateY(10px);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
+@keyframes popIn {
+  0% { transform: scale(0); }
+  100% { transform: scale(1); }
+}
+
+@keyframes progress-countdown {
+  0% { width: 100%; }
+  100% { width: 0%; }
 }
 
 .validation-popup {
@@ -582,52 +583,79 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.65);
+  background-color: rgba(0, 0, 0, 0.75);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: var(--spacing-md);
+  backdrop-filter: blur(5px);
 }
 
 .validation-popup .popup-content {
-  background: linear-gradient(145deg, #ffffff, #f9f9f9);
-  padding: var(--spacing-lg) var(--spacing-xl);
-  border-radius: 12px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  background-color: #ffffff;
+  padding: var(--spacing-xl) var(--spacing-2xl);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   text-align: center;
-  color: #333;
-  font-size: var(--text-medium);
   max-width: 90%;
   width: 100%;
-  animation: fadeInScaleUp 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  animation: fadeInScaleUp 0.5s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
   display: flex;
   flex-direction: column;
   align-items: center;
-  line-height: 1.4;
+  border-top: 4px solid #28a745;
 
   @media (min-width: 480px) {
-    max-width: 400px;
+    max-width: 420px;
     width: 90%;
   }
+}
 
-  @media (min-width: 640px) {
-    padding: var(--spacing-xl) var(--spacing-2xl);
-    font-size: var(--text-large);
-  }
+.validation-popup .popup-icon-wrapper {
+  width: clamp(50px, 10vw, 70px);
+  height: clamp(50px, 10vw, 70px);
+  border-radius: 50%;
+  background-color: #e8f5e9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--spacing-lg);
 }
 
 .validation-popup .popup-content .popup-icon {
-  width: clamp(35px, 6vw, 55px);
-  height: clamp(35px, 6vw, 55px);
+  width: clamp(35px, 6vw, 45px);
+  height: clamp(35px, 6vw, 45px);
   color: #28a745;
-  margin-bottom: var(--spacing-md);
 }
 
-.validation-popup .popup-content p {
-  margin: 0;
-  line-height: 1.5;
-  word-break: break-word;
+.validation-popup .popup-content .popup-title {
+  font-size: var(--text-large);
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 var(--spacing-xs) 0;
+}
+
+.validation-popup .popup-content .popup-message {
+  margin: 0 0 var(--spacing-lg) 0;
+  font-size: var(--text-base);
+  color: #4b5563;
+  line-height: 1.6;
+}
+
+.validation-popup .popup-timer-bar {
+  width: 100%;
+  height: 4px;
+  background-color: #e0e0e0;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.validation-popup .popup-timer-progress {
+  height: 100%;
+  background-color: #28a745;
+  border-radius: 2px;
+  animation: progress-countdown 5s linear forwards;
 }
 
 .required-marker {

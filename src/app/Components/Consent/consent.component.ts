@@ -91,41 +91,69 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.currentPlayerId = this.route.snapshot.paramMap.get('playerId');
-    const siteId = this.configService.getSiteId();
+    this.route.paramMap.pipe(takeUntil(this.destroy$)).subscribe((params) => {
+      this.currentPlayerId = params.get('playerId');
+      const siteId = this.configService.getSiteId();
 
-    this.loggingService.log(LogLevel.DEBUG, 'Consent component initializing', {
-      playerId: this.currentPlayerId,
-      siteId: siteId,
+      this.loggingService.log(
+        LogLevel.DEBUG,
+        'Consent component initializing or re-initializing for player.',
+        {
+          playerId: this.currentPlayerId,
+          siteId: siteId,
+        }
+      );
+
+      if (!this.currentPlayerId || !siteId) {
+        this.loggingService.log(
+          LogLevel.ERROR,
+          'Critical error: PlayerId or SiteId is missing.'
+        );
+        this.orchestrationService.handleCriticalError(
+          'PlayerId or SiteId missing'
+        );
+        return;
+      }
+
+      this.resetFormState();
+
+      this.uiInteractionService.hasReachedBottom$
+        .pipe(takeUntil(this.destroy$))
+        .subscribe((value) => {
+          if (value) {
+            this.hasReachedBottomOnce = true;
+            this.cdr.detectChanges();
+          }
+        });
+
+      this.loadInitialData(this.currentPlayerId, siteId);
     });
 
-    if (!this.currentPlayerId || !siteId) {
-      const apiErrorText = this.translate.instant('generic.apiError');
-      this.rulesText = apiErrorText;
-      this.safeRulesText = this.sanitizer.bypassSecurityTrustHtml(apiErrorText);
-      this.isLoadingInitialData = false;
-      this.loggingService.log(
-        LogLevel.ERROR,
-        'Critical error: PlayerId or SiteId is missing.'
-      );
-      this.orchestrationService.handleCriticalError(
-        'PlayerId or SiteId missing'
-      );
-      return;
-    }
-
-    this.uiInteractionService.hasReachedBottom$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((value) => {
-        if (value) {
-          this.hasReachedBottomOnce = true;
-          this.cdr.detectChanges();
-        }
-      });
-
-    this.loadInitialData(this.currentPlayerId, siteId);
+    this.listenForNewConsentRequests();
   }
+  private listenForNewConsentRequests(): void {
+    this.orchestrationService.newConsentRequest$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((newPlayerId) => {
+        this.loggingService.log(
+          LogLevel.INFO,
+          'New consent request received, cancelling current flow.',
+          { newPlayerId }
+        );
 
+        if (this.navigationTimer) {
+          clearTimeout(this.navigationTimer);
+          this.navigationTimer = null;
+        }
+
+        this.showValidationPopup = false;
+
+        this.router.navigate(['/consent', newPlayerId], {
+          skipLocationChange: true,
+          replaceUrl: true,
+        });
+      });
+  }
   private loadInitialData(playerId: string, siteId: string): void {
     this.isLoadingInitialData = true;
     this.cdr.detectChanges();
@@ -386,6 +414,8 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
 
       this.navigationTimer = setTimeout(() => {
         this.showValidationPopup = false;
+        this.resetFormState();
+
         this.router.navigate(['/logo'], { skipLocationChange: true });
         this.resetFormState();
         this.buttonState = 'idle';
@@ -414,5 +444,6 @@ export class ConsentComponent implements OnInit, AfterViewInit, OnDestroy {
     this.casinoName = '';
     this.casinoLogoUrl = null;
     this.logoLayoutType = 'portrait';
+    this.buttonState = 'idle';
   }
 }

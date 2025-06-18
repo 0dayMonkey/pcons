@@ -1,0 +1,37 @@
+export const PDF_CONFIG = {
+  margin: 15,
+  fontSizes: {
+    headerTitle: 18,
+    headerSubtitle: 11,
+    playerInfo: 10,
+    sectionTitle: 14,
+    h1: 14,
+    h2: 12,
+    body: 9,
+    pre: 8,
+    checkboxLabel: 10,
+    info: 9,
+    footer: 8,
+  },
+  colors: {
+    text: '#000000',
+    subtitle: '#505050',
+    link: '#0000EE',
+    line: '#C8C8C8',
+    placeholder: '#E6E6E6',
+    placeholderText: '#969696',
+    required: '#FF0000',
+  },
+  spacing: {
+    headerBottom: 5,
+    afterSectionTitle: 8,
+    section: 10,
+    line: 4,
+    checkboxLineHeight: 4.5,
+  },
+  checkboxSize: 4,
+  signatureBox: {
+    width: 80,
+    height: 30,
+  },
+};

@@ -1,3 +1,5 @@
+// src/app/Services/consent-orchestration.service.ts
+
 import { Injectable, ElementRef } from '@angular/core';
 import { Router } from '@angular/router';
 import {
@@ -19,7 +21,7 @@ import {
 import { ConfigService } from './config.service';
 import { ConsentPdfService, PdfGenerationData } from './consent-pdf.service';
 import { LoggingService } from './logging.service';
-import { forkJoin, of, Observable } from 'rxjs';
+import { forkJoin, of, Observable, Subject } from 'rxjs';
 import { catchError, switchMap, first, map } from 'rxjs/operators';
 
 export type PdfLayoutType = 'portrait' | 'wide';
@@ -55,6 +57,9 @@ export interface SubmissionData {
   providedIn: 'root',
 })
 export class ConsentOrchestrationService {
+  private newConsentRequestSource = new Subject<string>();
+  public newConsentRequest$ = this.newConsentRequestSource.asObservable();
+
   constructor(
     private apiService: ApiService,
     private configService: ConfigService,
@@ -63,6 +68,10 @@ export class ConsentOrchestrationService {
     private router: Router,
     private loggingService: LoggingService
   ) {}
+
+  public requestNewConsent(playerId: string): void {
+    this.newConsentRequestSource.next(playerId);
+  }
 
   public loadInitialData(
     playerId: string,
@@ -148,7 +157,7 @@ export class ConsentOrchestrationService {
               const expiryDate = new Date(
                 validDocument.expiryDate!
               ).toLocaleDateString('fr-FR');
-              identityDocumentString = `${validDocument.documentType.label}, ${validDocument.documentNumber}, ${expiryDate}`;
+              identityDocumentString = `${validDocument.documentType.longLabel}, ${validDocument.documentNumber}, ${expiryDate}`;
             }
 
             return {
@@ -221,7 +230,10 @@ export class ConsentOrchestrationService {
         throw new Error('Missing location configuration.');
       }
 
-      const location: LocationRef = { type: locationType, id: locationId };
+      const location: LocationRef = {
+        locationType: locationType,
+        id: locationId,
+      };
 
       const payload: PlayerConsentPOST = {
         id: data.consentIdToDisplayAndSubmit,
