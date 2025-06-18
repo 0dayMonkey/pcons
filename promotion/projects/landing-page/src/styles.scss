@@ -1,0 +1,243 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+@import './assets/styles/theme';
+
+:root {
+  --primary-color: #{$primary-color};
+  --accent-color: #{$accent-color};
+  --warn-color: #{$warn-color};
+  --error-color: #{$error-color};
+  --success-color: #{$success-color};
+  --background-color: #{$background-color};
+  --dark-background: #{$dark-background};
+  --buttonColor: #{$accent-color};
+  --buttonOpacity: 1;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: 'Roboto', sans-serif;
+  background-color: $background-color;
+  color: white;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  touch-action: none;
+  overscroll-behavior: none;
+}
+
+::-webkit-scrollbar {
+  display: none;
+}
+
+.text-small {
+  font-size: $text-small;
+}
+
+.text-medium {
+  font-size: $text-medium;
+}
+
+.text-big {
+  font-size: $text-big;
+}
+
+.text-huge {
+  font-size: $text-huge;
+}
+
+.text-xhuge {
+  font-size: $text-xhuge;
+}
+
+.text-small-spacing {
+  line-height: 110%;
+}
+
+.text-medium-spacing {
+  line-height: 130%;
+}
+
+.text-large-spacing {
+  line-height: 150%;
+}
+
+button {
+  border: none;
+  outline: none;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 12px 24px;
+  font-weight: 500;
+  font-size: $text-medium;
+  transition: all 0.2s ease;
+  white-space: pre-wrap !important;
+  line-height: 100% !important;
+
+  &.standard-button {
+    background-color: white;
+    color: $dark-background;
+  }
+
+  &.validate-button {
+    background-color: $success-color;
+    color: white;
+  }
+
+  &.cancel-button {
+    background-color: $error-color;
+    color: white;
+  }
+
+  &.button-active {
+    background-color: $accent-color;
+    color: white;
+    transform: scale(1.05);
+  }
+
+  &:active {
+    background-color: $accent-color;
+    transform: scale(0.95);
+  }
+}
+
+.static-btn {
+  width: $buttonSizeW;
+  height: $buttonSizeH;
+  line-height: 25vh;
+  text-align: center;
+  vertical-align: middle;
+  justify-content: center;
+  background-color: var(--buttonColor);
+  opacity: var(--buttonOpacity);
+}
+
+.between {
+  justify-content: space-between;
+}
+
+.center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.flex {
+  display: flex;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+}
+
+.validate-button-color {
+  background-color: rgb(108, 172, 71);
+}
+
+.cancel-button-color {
+  background-color: rgb(217, 4, 41);
+}
+
+.skeleton-text {
+  display: inline-block;
+  background-color: #e0e0e0;
+  color: transparent;
+  user-select: none;
+  border-radius: 4px;
+  animation: pulse 1.5s infinite ease-in-out;
+  line-height: 1em;
+  min-height: 1em;
+  min-width: 50px;
+  vertical-align: middle;
+
+  &.skeleton-short {
+    width: 80px;
+  }
+  &.skeleton-medium {
+    width: 200px;
+    height :33px;
+  }
+  &.skeleton-long {
+    width: 250px;
+    height: 25px;
+  }
+  &.skeleton-title {
+    min-height: 1.2em;
+    width: 350px;
+  }
+  &.skeleton-xlong {
+    height: 25px;
+    width: 500px;
+  }
+}
+
+.skeleton-button {
+  display: inline-block;
+  user-select: none;
+  border-radius: 4px;
+  animation: pulse_button 1.5s infinite ease-in-out;
+  height: 70px;
+  padding: 15px;
+  width: 100%;
+  box-sizing: border-box;
+  vertical-align: middle;
+
+  &.skeleton-button-medium {
+    width: 320px;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    background-color: #3a3939;
+  }
+  50% {
+    background-color: #424242;
+  }
+  100% {
+    background-color: #363131;
+  }
+}
+
+@keyframes pulse_button {
+  0% {
+    background-color: #f85f31;
+  }
+  50% {
+    background-color: #a34325;
+  }
+  100% {
+    background-color: #f85f31;
+  }
+}
+
+.text-hidden-while-loading {
+  visibility: hidden;
+  opacity: 0;
+}
+.text-visible-when-loaded {
+  visibility: visible;
+}
+
+.text-loaded-fade-in {
+  opacity: 0; 
+  animation: textFadeInAnimation 0.25s ease-out forwards; 
+  animation-delay: 0.2s; 
+}
+
+@keyframes textFadeInAnimation {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

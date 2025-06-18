@@ -1,0 +1,53 @@
+{
+  "PromoList": {
+    "enterCode": "コードを入力します",
+    "emptyInventory": "現在受け取れるギフトはありません。",
+    "bonusPoints": "{{value}} ボーナスポイント",
+    "cashReward": "{{value}} 提供",
+    "enterPromoCode": "バウチャーコードを入力してください",
+    "codeInputPlaceholder": "XX-XXXX-XXXX-XXXX-XXXX",
+    "validate": "コードを検証",
+    "codeAccepted": "コードが承認されました",
+    "invalidCode": "無効なコード",
+    "errorValidatingCode": "コードの検証中にエラーが発生しました",
+    "returnButton": "戻る",
+    "back": "戻る",
+    "utilisationInfo": "残り{{restantes}}/{{maximum}}"
+  },
+  "Confirmation": {
+    "successTitle": "おめでとうございます！",
+    "errorTitle": "エラー",
+    "memberSuccessMessage": "{{reward}} が {{rewardType}} に追加されました",
+    "nonMemberSuccessMessage": "{{reward}} が {{rewardType}} に追加されました",
+    "balanceMessage": "{{rewardType}} の新しい残高は {{balance}} です",
+    "memberRewardType": "プレイヤーポイント残高に",
+    "machineRewardType": "マシンのクレジットに",
+    "pointsBalance": "プレイヤーポイント",
+    "cashBalance": "クレジット",
+    "genericError": "予期せぬエラーが発生しました",
+    "errorMessage": "{{error}}",
+    "returnButton": "戻る"
+  },
+  "Errors": {
+    "UNKNOWN_ERROR": "予期せぬエラーが発生しました。",
+    "API_COMMUNICATION_ERROR": "プロモーションを取得できませんでした。後でもう一度お試しください。",
+    "JOAPI_STIM_0001": "このプロモーションは存在しません。",
+    "JOAPI_STIM_0002": "プロモーションは利用できません。",
+    "JOAPI_STIM_0003": "このプロモーションの権限がありません。",
+    "JOAPI_STIM_0004": "プロモーションは既に使用されているか、期限切れです。",
+    "JOAPI_STIM_0005": "プロモーションは終了しました。",
+    "JOAPI_STIM_0006": "最大利用回数に達しました。",
+    "JOAPI_STIM_0007": "プロモーションは有効期間外です。",
+    "JOAPI_STIM_0008": "この施設ではプロモーションを利用できません。",
+    "JOAPI_STIM_0009": "利用間隔が守られていません。",
+    "JOAPI_STIM_0011": "利用施設が指定されていません。",
+    "JOAPI_STIM_0012": "プロモーションは利用できません。後でもう一度お試しください。",
+    "JOAPI_STIM_0013": "プロモーションは利用できません。後でもう一度お試しください。",
+    "JOAPI_STIM_0017": "このマシンではプロモーションを利用できません",
+    "MBOX_AUTH_ERROR": "認証に進めません。後でもう一度お試しください。",
+    "PIN_INVALID": "PINが正しくありません。後でもう一度お試しください。",
+    "MBOX_TIMEOUT_ERROR": "認証に時間がかかりすぎました。後でもう一度お試しください。",
+    "APPLICATION_ERROR": "プロモーションの適用中にエラーが発生しました。後でもう一度お試しください。",
+    "VALIDATION_ERROR": "コードの検証中にエラーが発生しました。後でもう一度お試しください。"
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "PromoList": {
+    "enterCode": "코드 입력",
+    "emptyInventory": "현재 수령할 선물이 없습니다.",
+    "bonusPoints": "{{value}} 보너스 포인트",
+    "cashReward": "{{value}} 제공됨",
+    "enterPromoCode": "바우처 코드를 입력하세요",
+    "codeInputPlaceholder": "XX-XXXX-XXXX-XXXX-XXXX",
+    "validate": "코드 확인",
+    "codeAccepted": "코드가 승인되었습니다",
+    "invalidCode": "유효하지 않은 코드",
+    "errorValidatingCode": "코드 확인 중 오류 발생",
+    "returnButton": "돌아가기",
+    "back": "뒤로",
+    "utilisationInfo": "{{restantes}}/{{maximum}} 남음"
+  },
+  "Confirmation": {
+    "successTitle": "축하합니다!",
+    "errorTitle": "오류",
+    "memberSuccessMessage": "{{reward}}이(가) {{rewardType}}에 추가되었습니다",
+    "nonMemberSuccessMessage": "{{reward}}이(가) {{rewardType}}에 추가되었습니다",
+    "balanceMessage": "새로운 {{rewardType}} 잔액은 {{balance}}입니다",
+    "memberRewardType": "플레이어 포인트 잔액에",
+    "machineRewardType": "기기 크레딧에",
+    "pointsBalance": "플레이어 포인트",
+    "cashBalance": "크레딧",
+    "genericError": "예상치 못한 오류가 발생했습니다",
+    "errorMessage": "{{error}}",
+    "returnButton": "돌아가기"
+  },
+  "Errors": {
+    "UNKNOWN_ERROR": "예상치 못한 오류가 발생했습니다.",
+    "API_COMMUNICATION_ERROR": "프로모션을 가져올 수 없습니다. 나중에 다시 시도하십시오.",
+    "JOAPI_STIM_0001": "이 프로모션은 존재하지 않습니다.",
+    "JOAPI_STIM_0002": "프로모션을 사용할 수 없습니다.",
+    "JOAPI_STIM_0003": "이 프로모션에 대한 권한이 없습니다.",
+    "JOAPI_STIM_0004": "프로모션이 이미 사용되었거나 만료되었습니다.",
+    "JOAPI_STIM_0005": "프로모션이 종료되었습니다.",
+    "JOAPI_STIM_0006": "최대 사용 횟수에 도달했습니다.",
+    "JOAPI_STIM_0007": "프로모션 유효 기간이 아닙니다.",
+    "JOAPI_STIM_0008": "이 시설에서는 프로모션을 사용할 수 없습니다.",
+    "JOAPI_STIM_0009": "사용 간격이 지켜지지 않았습니다.",
+    "JOAPI_STIM_0011": "사용 시설이 지정되지 않았습니다.",
+    "JOAPI_STIM_0012": "프로모션을 사용할 수 없습니다. 나중에 다시 시도하십시오.",
+    "JOAPI_STIM_0013": "프로모션을 사용할 수 없습니다. 나중에 다시 시도하십시오.",
+    "JOAPI_STIM_0017": "이 기기에서는 프로모션을 사용할 수 없습니다",
+    "MBOX_AUTH_ERROR": "인증을 진행할 수 없습니다. 나중에 다시 시도하십시오.",
+    "PIN_INVALID": "PIN이 잘못되었습니다. 나중에 다시 시도하십시오.",
+    "MBOX_TIMEOUT_ERROR": "인증 시간이 너무 오래 걸렸습니다. 나중에 다시 시도하십시오.",
+    "APPLICATION_ERROR": "프로모션 적용 중 오류가 발생했습니다. 나중에 다시 시도하십시오.",
+    "VALIDATION_ERROR": "코드 확인 중 오류가 발생했습니다. 나중에 다시 시도하십시오."
+  }
+}

@@ -1,0 +1,11 @@
+@import '../assets/styles/theme';
+
+.app-container {
+  width: $app-width;
+  height: $app-height;
+  margin: 0 auto;
+  overflow: hidden;
+  background-color: $dark-background;
+  position: relative;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}

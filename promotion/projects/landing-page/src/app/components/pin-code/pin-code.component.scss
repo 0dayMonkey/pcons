@@ -1,0 +1,239 @@
+@import '../../../assets/styles/theme';
+
+.pin-code-container {
+  display: flex;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  height: 100%;
+  width: 100%;
+  background-color: $dark-background;
+  box-sizing: border-box;
+  overflow: hidden;
+  transform: translateX(100%);
+  animation: slide-from-right 0.5s forwards;
+  z-index: 5;
+}
+
+@keyframes slide-from-right {
+  0% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-to-right {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.slide-out {
+  animation: slide-to-right 0.5s forwards;
+}
+
+.two-column-layout {
+  display: flex;
+  flex: 1;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  height: 100%;
+}
+
+.left-column {
+  flex: 0.8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 40px;
+  box-sizing: border-box;
+}
+
+.title {
+  text-align: center;
+  font-size: 37px;
+  font-weight: 500;
+  color: white;
+  margin-top: 0;
+  margin-bottom: 20px;
+  width: 500px;
+}
+
+.separator {
+  width: 3px;
+  background-color: rgba(255, 255, 255, 0.2);
+  margin: 60px 30px;
+}
+
+.right-column {
+  flex: 1.2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.input-container {
+  position: relative;
+  width: 100%;
+  margin-bottom: 30px; 
+  box-sizing: border-box;
+}
+
+.code-input {
+  width: 100%;
+  padding: 15px 20px;
+  font-size: 26px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  text-align: left;
+  box-sizing: border-box;
+  height: 70px;
+  
+  &::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+  }
+}
+
+.clear-button {
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  font-size: 32px;
+  color: rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.validate-button {
+  padding: 15px;
+  background-color: $accent-color;
+  color: white;
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.2s;
+  letter-spacing: 1px;
+  height: 70px;
+  box-sizing: border-box;
+  line-height: 100%;
+  width: 100%;
+  opacity: 1;
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  
+  &:hover:not(:disabled) {
+    transform: scale(1.02);
+  }
+  
+  &:active {
+    background-color: $accent-color;
+    transform: scale(0.98);
+  }
+}
+
+.numpad {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 1500px;
+}
+
+.numpad-row {
+  display: flex;
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+
+.numpad-key {
+  width: 500px;
+  height: 80px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 60px;
+  font-weight: 500;
+  color: white;
+  cursor: pointer;
+  margin: 0 10px;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+  box-sizing: border-box;
+  white-space: pre-wrap;
+  line-height: 100%;
+  
+  &:active {
+    background-color: $accent-color;
+    transform: scale(0.98);
+  }
+  
+  &.backspace {
+    color: $accent-color;
+    
+    .backspace-icon {
+      font-size: 36px;
+    }
+  }
+}
+
+.back-button {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 60px;
+  height: 60px;
+  border-radius: 20%;
+  background-color: $accent-color;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s;
+  padding: 0px;
+  
+  &:hover {
+    transform: scale(1.05);
+  }
+  
+  &:active {
+    transform: scale(0.95);
+  }
+  
+  .back-icon {
+    font-size: 32px;
+    font-weight: bold;
+  }
+}
+
+.backButtonIcon {
+  font-size: 40px;
+  height: 40px;
+  width: 40px;
+}

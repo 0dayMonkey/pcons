@@ -1,0 +1,53 @@
+{
+  "PromoList": {
+    "enterCode": "I enter a code",
+    "emptyInventory": "You don't have any gifts to collect at the moment.",
+    "bonusPoints": "{{value}} bonus points",
+    "cashReward": "{{value}} offered",
+    "enterPromoCode": "Enter your voucher code",
+    "codeInputPlaceholder": "XX-XXXX-XXXX-XXXX-XXXX",
+    "validate": "VALIDATE CODE",
+    "codeAccepted": "Code accepted",
+    "invalidCode": "Invalid code",
+    "errorValidatingCode": "Error validating code",
+    "returnButton": "RETURN",
+    "back": "Back",
+    "utilisationInfo": "{{restantes}}/{{maximum}} remaining"
+  },
+  "Confirmation": {
+    "successTitle": "Congratulations!",
+    "errorTitle": "Error",
+    "memberSuccessMessage": "{{reward}} have been added {{rewardType}}",
+    "nonMemberSuccessMessage": "{{reward}} have been added {{rewardType}}",
+    "balanceMessage": "Your new balance of {{rewardType}} is {{balance}}",
+    "memberRewardType": "to your player points balance",
+    "machineRewardType": "to the machine credit",
+    "pointsBalance": "player points",
+    "cashBalance": "credit",
+    "genericError": "An unexpected error occurred",
+    "errorMessage": "{{error}}",
+    "returnButton": "RETURN"
+  },
+  "Errors": {
+    "UNKNOWN_ERROR": "An unexpected error occurred.",
+    "API_COMMUNICATION_ERROR": "Could not retrieve your promotions, please try again later.",
+    "JOAPI_STIM_0001": "This promotion does not exist.",
+    "JOAPI_STIM_0002": "Promotion not available.",
+    "JOAPI_STIM_0003": "You are not authorized for this promotion.",
+    "JOAPI_STIM_0004": "Promotion already used or expired.",
+    "JOAPI_STIM_0005": "Promotion closed.",
+    "JOAPI_STIM_0006": "Maximum number of uses reached.",
+    "JOAPI_STIM_0007": "Promotion outside of validity period.",
+    "JOAPI_STIM_0008": "Promotion not usable in this establishment.",
+    "JOAPI_STIM_0009": "Delay between uses not respected.",
+    "JOAPI_STIM_0011": "Usage establishment not specified.",
+    "JOAPI_STIM_0012": "Promotion unusable, please try again later.",
+    "JOAPI_STIM_0013": "Promotion unusable, please try again later.",
+    "JOAPI_STIM_0017": "Promotion not usable on this machine",
+    "MBOX_AUTH_ERROR": "Unable to proceed with identification, please try again later.",
+    "PIN_INVALID": "Incorrect PIN, please try again later.",
+    "MBOX_TIMEOUT_ERROR": "Identification took too long, please try again later.",
+    "APPLICATION_ERROR": "Error applying the promotion, please try again later.",
+    "VALIDATION_ERROR": "Error validating the code, please try again later."
+  }
+}

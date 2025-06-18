@@ -1,0 +1,24 @@
+<div class="confirmation-container" [ngClass]="{'fade-in': animationStarted}">
+    <button class="back-button" (click)="goBack()" [title]="'PromoList.back' | translate">
+      <mat-icon aria-hidden="true" class="backButtonIcon">arrow_back</mat-icon>
+    </button>
+  
+    <div class="content-wrapper">
+      <div class="icon-container">
+        <div class="status-icon" [ngClass]="{'success-icon': isSuccess, 'error-icon': !isSuccess}">
+          <span *ngIf="isSuccess">✓</span>
+          <span *ngIf="!isSuccess">✗</span>
+        </div>
+      </div>
+  
+      <h2 class="title" [ngClass]="{'success-title': isSuccess, 'error-title': !isSuccess}">
+        {{ titleText }}
+      </h2>
+  
+      <div class="message-container">
+        <p class="message">{{ messageText }}</p>
+        <p class="sub-message" *ngIf="subMessageText">{{ subMessageText }}</p>
+      </div>
+ 
+    </div>
+  </div>

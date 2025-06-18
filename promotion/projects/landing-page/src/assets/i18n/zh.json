@@ -1,0 +1,53 @@
+{
+  "PromoList": {
+    "enterCode": "我输入代码",
+    "emptyInventory": "您目前没有可领取的礼物。",
+    "bonusPoints": "{{value}} 奖励积分",
+    "cashReward": "{{value}} 赠送",
+    "enterPromoCode": "请输入您的优惠券代码",
+    "codeInputPlaceholder": "XX-XXXX-XXXX-XXXX-XXXX",
+    "validate": "验证代码",
+    "codeAccepted": "代码已接受",
+    "invalidCode": "无效代码",
+    "errorValidatingCode": "验证代码时出错",
+    "returnButton": "返回",
+    "back": "返回",
+    "utilisationInfo": "剩余 {{restantes}}/{{maximum}}"
+  },
+  "Confirmation": {
+    "successTitle": "恭喜！",
+    "errorTitle": "错误",
+    "memberSuccessMessage": "{{reward}} 已添加到 {{rewardType}}",
+    "nonMemberSuccessMessage": "{{reward}} 已添加到 {{rewardType}}",
+    "balanceMessage": "您的新 {{rewardType}} 余额为 {{balance}}",
+    "memberRewardType": "您的玩家积分余额",
+    "machineRewardType": "机器信用额度",
+    "pointsBalance": "玩家积分",
+    "cashBalance": "信用额度",
+    "genericError": "发生意外错误",
+    "errorMessage": "{{error}}",
+    "returnButton": "返回"
+  },
+  "Errors": {
+    "UNKNOWN_ERROR": "发生意外错误。",
+    "API_COMMUNICATION_ERROR": "无法检索您的促销活动，请稍后重试。",
+    "JOAPI_STIM_0001": "此促销活动不存在。",
+    "JOAPI_STIM_0002": "促销活动不可用。",
+    "JOAPI_STIM_0003": "您无权参加此促销活动。",
+    "JOAPI_STIM_0004": "促销活动已使用或已过期。",
+    "JOAPI_STIM_0005": "促销活动已结束。",
+    "JOAPI_STIM_0006": "已达到最大使用次数。",
+    "JOAPI_STIM_0007": "促销活动不在有效期内。",
+    "JOAPI_STIM_0008": "此促销活动不能在此场所使用。",
+    "JOAPI_STIM_0009": "未遵守使用间隔时间。",
+    "JOAPI_STIM_0011": "未指定使用场所。",
+    "JOAPI_STIM_0012": "促销活动无法使用，请稍后重试。",
+    "JOAPI_STIM_0013": "促销活动无法使用，请稍后重试。",
+    "JOAPI_STIM_0017": "此促销活动不能在此机器上使用",
+    "MBOX_AUTH_ERROR": "无法进行身份验证，请稍后重试。",
+    "PIN_INVALID": "PIN 码不正确，请稍后重试。",
+    "MBOX_TIMEOUT_ERROR": "身份验证时间过长，请稍后重试。",
+    "APPLICATION_ERROR": "应用促销活动时出错，请稍后重试。",
+    "VALIDATION_ERROR": "验证代码时出错，请稍后重试。"
+  }
+}

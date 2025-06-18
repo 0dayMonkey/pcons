@@ -1,0 +1,51 @@
+$primary-color: #7F8489;
+$accent-color: #FF5722; 
+$warn-color: #FF9B00;
+$error-color: #FF2A52;
+$success-color: #4CA350;
+$background-color: #303030;
+$dark-background: #222222;
+
+* {
+  overflow: hidden;
+}
+
+@mixin accent-gradient {
+  background-color: $accent-color;
+}
+
+$text-small: 32px;
+$text-medium: 36px;
+$text-big: 40px;
+$text-huge: 48px;
+$text-xhuge: 76px;
+
+$app-width: 1280px;
+$app-height: 413px;
+
+$buttonSizeW: 25vh;
+$buttonSizeH: 25vh;
+
+@keyframes click-animation {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.03);
+  }
+  60% {
+    transform: scale(0.98);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
+}

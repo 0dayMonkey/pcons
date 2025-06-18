@@ -1,0 +1,144 @@
+@import '../../../assets/styles/theme';
+
+.confirmation-container {
+  display: flex;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  height: 100%;
+  width: 100%;
+  background-color: $dark-background;
+  box-sizing: border-box;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+  z-index: 10;
+  
+  &.fade-in {
+    opacity: 1;
+  }
+  
+  &.fade-out {
+    opacity: 0;
+  }
+}
+
+.content-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.icon-container {
+  margin-bottom: 20px;
+  
+  .status-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 50px;
+    color: white;
+    
+    &.success-icon {
+      background-color: $success-color;
+    }
+    
+    &.error-icon {
+      background-color: $error-color;
+    }
+  }
+}
+
+.title {
+  font-size: 42px;
+  text-align: center;
+  margin-bottom: 30px;
+  
+  &.success-title {
+    color: $accent-color;
+  }
+  
+  &.error-title {
+    color: $error-color;
+  }
+}
+
+.message-container {
+  width: 80%;
+  max-width: 800px;
+  text-align: center;
+  margin-bottom: 40px;
+  
+  .message {
+    font-size: 32px;
+    color: white;
+    margin-bottom: 15px;
+  }
+  
+  .sub-message {
+    font-size: 28px;
+    color: $primary-color;
+  }
+}
+
+.confirm-button {
+  padding: 15px 30px;
+  background-color: $accent-color;
+  color: white;
+  border: none;
+  font-size: 28px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.2s;
+  
+  &:hover {
+    transform: scale(1.05);
+  }
+  
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.back-button {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 60px;
+  height: 60px;
+  border-radius: 20%;
+  background-color: $accent-color;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s;
+  padding: 0px;
+  z-index: 10;
+  
+  &:hover {
+    transform: scale(1.05);
+  }
+  
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.backButtonIcon {
+  font-size: 30px;
+  height: 30px;
+  width: 30px;
+}

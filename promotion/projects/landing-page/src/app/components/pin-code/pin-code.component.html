@@ -1,0 +1,57 @@
+<div class="pin-code-container">
+  <div class="two-column-layout">
+    <div class="left-column">
+      <button class="back-button" (click)="goBack()" [title]="'PromoList.back' | translate">
+        <mat-icon aria-hidden="true" class="backButtonIcon">arrow_back</mat-icon>
+      </button>
+      <h2 class="title">{{ pinTitle }}</h2>
+
+      <div class="input-container">
+        <input 
+          type="text" 
+          class="code-input" 
+          [(ngModel)]="voucherCode" 
+          [readonly]="true"
+          [placeholder]="placeholderText">
+        <button *ngIf="voucherCode" class="clear-button" (click)="clearCode()">×</button>
+      </div>
+      
+      <button 
+        class="validate-button" 
+        [disabled]="!isValidCode()"
+        (click)="validateCode()">
+        {{ validateButtonText }}
+      </button>
+    </div>
+    
+    <div class="separator"></div>
+    
+    <div class="right-column">
+      <div class="numpad">
+        <div class="numpad-row">
+          <button class="numpad-key" (click)="appendDigit('1')">1</button>
+          <button class="numpad-key" (click)="appendDigit('2')">2</button>
+          <button class="numpad-key" (click)="appendDigit('3')">3</button>
+        </div>
+        <div class="numpad-row">
+          <button class="numpad-key" (click)="appendDigit('4')">4</button>
+          <button class="numpad-key" (click)="appendDigit('5')">5</button>
+          <button class="numpad-key" (click)="appendDigit('6')">6</button>
+        </div>
+        <div class="numpad-row">
+          <button class="numpad-key" (click)="appendDigit('7')">7</button>
+          <button class="numpad-key" (click)="appendDigit('8')">8</button>
+          <button class="numpad-key" (click)="appendDigit('9')">9</button>
+        </div>
+        <div class="numpad-row">
+          <button class="numpad-key" (click)="clearCode()">{{ clearButtonText }}</button>
+          <button class="numpad-key" (click)="appendDigit('0')">0</button>
+          <button class="numpad-key backspace" (click)="removeLastDigit()">
+            <span class="backspace-icon">⌫</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

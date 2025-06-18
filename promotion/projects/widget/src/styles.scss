@@ -1,0 +1,67 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  touch-action: none;
+  overscroll-behavior: none;
+}
+
+body {
+  font-family: 'Roboto', sans-serif;
+  background-color: transparent;
+}
+
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* Variables matching the design system */
+:root {
+  --primary-color: #7F8489;
+  --accent-color: #FF5722;
+  --warn-color: #FF9B00;
+  --error-color: #FF2A52;
+  --success-color: #4CA350;
+  --background-color: #303030;
+  --dark-background: #222222;
+}
+
+.text-small {
+  font-size: 32px;
+}
+
+.text-medium {
+  font-size: 36px;
+}
+
+.text-big {
+  font-size: 40px;
+}
+
+.text-huge {
+  font-size: 48px;
+}
+
+.text-xhuge {
+  font-size: 76px;
+}
+
+button {
+  white-space: pre-wrap !important;
+  line-height: 100% !important;
+}
+
+.button-active {
+  background-color: #FF5722;
+}
+
+button:active {
+  background-color: #FF5722;
+}

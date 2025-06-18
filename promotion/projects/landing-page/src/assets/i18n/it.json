@@ -1,0 +1,53 @@
+{
+  "PromoList": {
+    "enterCode": "Inserisco un codice",
+    "emptyInventory": "Non hai regali da ritirare al momento.",
+    "bonusPoints": "{{value}} punti bonus",
+    "cashReward": "{{value}} offerti",
+    "enterPromoCode": "Inserisci il tuo codice voucher",
+    "codeInputPlaceholder": "XX-XXXX-XXXX-XXXX-XXXX",
+    "validate": "CONVALIDA CODICE",
+    "codeAccepted": "Codice accettato",
+    "invalidCode": "Codice non valido",
+    "errorValidatingCode": "Errore durante la convalida del codice",
+    "returnButton": "RITORNA",
+    "back": "Indietro",
+    "utilisationInfo": "{{restantes}}/{{maximum}} rimanenti"
+  },
+  "Confirmation": {
+    "successTitle": "Congratulazioni!",
+    "errorTitle": "Errore",
+    "memberSuccessMessage": "{{reward}} sono stati aggiunti {{rewardType}}",
+    "nonMemberSuccessMessage": "{{reward}} sono stati aggiunti {{rewardType}}",
+    "balanceMessage": "Il tuo nuovo saldo di {{rewardType}} è di {{balance}}",
+    "memberRewardType": "al tuo saldo punti giocatore",
+    "machineRewardType": "al credito della macchina",
+    "pointsBalance": "punti giocatore",
+    "cashBalance": "credito",
+    "genericError": "Si è verificato un errore imprevisto",
+    "errorMessage": "{{error}}",
+    "returnButton": "RITORNA"
+  },
+  "Errors": {
+    "UNKNOWN_ERROR": "Si è verificato un errore imprevisto.",
+    "API_COMMUNICATION_ERROR": "Impossibile recuperare le tue promozioni, riprova più tardi.",
+    "JOAPI_STIM_0001": "Questa promozione non esiste.",
+    "JOAPI_STIM_0002": "Promozione non disponibile.",
+    "JOAPI_STIM_0003": "Non sei autorizzato per questa promozione.",
+    "JOAPI_STIM_0004": "Promozione già utilizzata o scaduta.",
+    "JOAPI_STIM_0005": "Promozione chiusa.",
+    "JOAPI_STIM_0006": "Numero massimo di utilizzi raggiunto.",
+    "JOAPI_STIM_0007": "Promozione fuori dal periodo di validità.",
+    "JOAPI_STIM_0008": "Promozione non utilizzabile in questo stabilimento.",
+    "JOAPI_STIM_0009": "Ritardo tra gli utilizzi non rispettato.",
+    "JOAPI_STIM_0011": "Stabilimento di utilizzo non specificato.",
+    "JOAPI_STIM_0012": "Promozione non utilizzabile, riprova più tardi.",
+    "JOAPI_STIM_0013": "Promozione non utilizzabile, riprova più tardi.",
+    "JOAPI_STIM_0017": "Promozione non utilizzabile su questa macchina",
+    "MBOX_AUTH_ERROR": "Impossibile procedere con l'identificazione, riprova più tardi.",
+    "PIN_INVALID": "PIN errato, riprova più tardi.",
+    "MBOX_TIMEOUT_ERROR": "L'identificazione ha richiesto troppo tempo, riprova più tardi.",
+    "APPLICATION_ERROR": "Errore durante l'applicazione della promozione, riprova più tardi.",
+    "VALIDATION_ERROR": "Errore durante la convalida del codice, riprova più tardi."
+  }
+}

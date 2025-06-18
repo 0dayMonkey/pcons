@@ -1,0 +1,53 @@
+{
+  "PromoList": {
+    "enterCode": "Ich gebe einen Code ein",
+    "emptyInventory": "Sie haben derzeit keine Geschenke zum Abholen.",
+    "bonusPoints": "{{value}} Bonuspunkte",
+    "cashReward": "{{value}} geschenkt",
+    "enterPromoCode": "Geben Sie Ihren Gutscheincode ein",
+    "codeInputPlaceholder": "XX-XXXX-XXXX-XXXX-XXXX",
+    "validate": "CODE BESTÄTIGEN",
+    "codeAccepted": "Code akzeptiert",
+    "invalidCode": "Ungültiger Code",
+    "errorValidatingCode": "Fehler bei der Codevalidierung",
+    "returnButton": "ZURÜCK",
+    "back": "Zurück",
+    "utilisationInfo": "{{restantes}}/{{maximum}} verbleibend"
+  },
+  "Confirmation": {
+    "successTitle": "Herzlichen Glückwunsch!",
+    "errorTitle": "Fehler",
+    "memberSuccessMessage": "{{reward}} wurden {{rewardType}} hinzugefügt",
+    "nonMemberSuccessMessage": "{{reward}} wurden {{rewardType}} hinzugefügt",
+    "balanceMessage": "Ihr neuer Saldo von {{rewardType}} beträgt {{balance}}",
+    "memberRewardType": "Ihrem Spielpunktekonto",
+    "machineRewardType": "dem Guthaben des Automaten",
+    "pointsBalance": "Spielpunkte",
+    "cashBalance": "Guthaben",
+    "genericError": "Ein unerwarteter Fehler ist aufgetreten",
+    "errorMessage": "{{error}}",
+    "returnButton": "ZURÜCK"
+  },
+  "Errors": {
+    "UNKNOWN_ERROR": "Ein unerwarteter Fehler ist aufgetreten.",
+    "API_COMMUNICATION_ERROR": "Ihre Promotionen konnten nicht abgerufen werden, bitte versuchen Sie es später erneut.",
+    "JOAPI_STIM_0001": "Diese Promotion existiert nicht.",
+    "JOAPI_STIM_0002": "Promotion nicht verfügbar.",
+    "JOAPI_STIM_0003": "Sie sind für diese Promotion nicht berechtigt.",
+    "JOAPI_STIM_0004": "Promotion bereits verwendet oder abgelaufen.",
+    "JOAPI_STIM_0005": "Promotion geschlossen.",
+    "JOAPI_STIM_0006": "Maximale Anzahl an Verwendungen erreicht.",
+    "JOAPI_STIM_0007": "Promotion außerhalb des Gültigkeitszeitraums.",
+    "JOAPI_STIM_0008": "Promotion in dieser Einrichtung nicht nutzbar.",
+    "JOAPI_STIM_0009": "Zeitabstand zwischen Nutzungen nicht eingehalten.",
+    "JOAPI_STIM_0011": "Nutzungseinrichtung nicht angegeben.",
+    "JOAPI_STIM_0012": "Promotion nicht nutzbar, bitte versuchen Sie es später erneut.",
+    "JOAPI_STIM_0013": "Promotion nicht nutzbar, bitte versuchen Sie es später erneut.",
+    "JOAPI_STIM_0017": "Promotion auf diesem Automaten nicht nutzbar",
+    "MBOX_AUTH_ERROR": "Identifizierung nicht möglich, bitte versuchen Sie es später erneut.",
+    "PIN_INVALID": "Falsche PIN, bitte versuchen Sie es später erneut.",
+    "MBOX_TIMEOUT_ERROR": "Die Identifizierung hat zu lange gedauert, bitte versuchen Sie es später erneut.",
+    "APPLICATION_ERROR": "Fehler beim Anwenden der Promotion, bitte versuchen Sie es später erneut.",
+    "VALIDATION_ERROR": "Fehler beim Validieren des Codes, bitte versuchen Sie es später erneut."
+  }
+}
